@@ -36,8 +36,20 @@ public class SkillAnimationManager : MonoBehaviour
         startAngles = new float[skillIcons.Length];
         targetAngles = new float[skillIcons.Length];
 
-        // Start in contracted mode
-        MoveToCompactMode();
+        // Start in contracted mode with snapping
+        StartInCompactMode();
+    }
+
+    public void StartInCompactMode()
+    {
+        currentMode = WheelMode.Contracted;
+        SnapToAngles(contractAngles);
+    }
+
+    public void StartInExpandMode()
+    {
+        currentMode = WheelMode.Expanded;
+        SnapToAngles(cachedExpandAngles);
     }
 
     [ContextMenu("Move Skills to Compact Mode")]
@@ -126,29 +138,32 @@ public class SkillAnimationManager : MonoBehaviour
 
             for (int i = 0; i < skillIcons.Length; i++)
             {
-                float angle = Mathf.Lerp(startAngles[i], targetAngles[i], s) % 360f;
+                float ang = Mathf.Lerp(startAngles[i], targetAngles[i], s) % 360f;
                 Vector2 pos = new Vector2(
-                    Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
-                    Mathf.Sin(angle * Mathf.Deg2Rad) * radius
+                    Mathf.Cos(ang * Mathf.Deg2Rad) * radius,
+                    Mathf.Sin(ang * Mathf.Deg2Rad) * radius
                 );
-                skillIcons[i].position = (Vector3)pos + center.position;
+                skillIcons[i].anchoredPosition = pos;
             }
             yield return null;
         }
 
-        // Snap exactly to final positions
+        SnapToAngles(finalAngles);
+        currentAnimation = null;
+    }
+
+    private void SnapToAngles(float[] angles)
+    {
         for (int i = 0; i < skillIcons.Length; i++)
         {
-            float angle = finalAngles[i] % 360f;
+            float ang = angles[i] % 360f;
             Vector2 pos = new Vector2(
-                Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
-                Mathf.Sin(angle * Mathf.Deg2Rad) * radius
+                Mathf.Cos(ang * Mathf.Deg2Rad) * radius,
+                Mathf.Sin(ang * Mathf.Deg2Rad) * radius
             );
-            skillIcons[i].position = (Vector3)pos + center.position;
+            skillIcons[i].anchoredPosition = pos;
         }
-
         HighlightSelectedSkill();
-        currentAnimation = null;
     }
 
     private void HighlightSelectedSkill()
@@ -166,7 +181,7 @@ public class SkillAnimationManager : MonoBehaviour
         }
         skillIcons[sel].localScale = Vector3.one * 1.2f;
     }
-
+    
     private void OnDrawGizmos()
     {
         if (center == null) return;

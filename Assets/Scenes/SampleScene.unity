@@ -689,6 +689,7 @@ MonoBehaviour:
   - {fileID: 1613032247}
   - {fileID: 1894977693}
   radius: 100
+  animationDuration: 5
   contractAngles:
   - 90
   - 18
@@ -701,7 +702,6 @@ MonoBehaviour:
   - 180
   - 135
   - 90
-  value: 90
 --- !u!1 &1418749155
 GameObject:
   m_ObjectHideFlags: 0
