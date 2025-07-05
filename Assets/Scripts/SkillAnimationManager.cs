@@ -1,147 +1,170 @@
 using UnityEngine;
+using System.Collections;
 
 public class SkillAnimationManager : MonoBehaviour
 {
-
     public RectTransform center;          // Assign via Inspector, the center of the wheel
 
     [Header("Skill Icon Transforms (RectTransforms)")]
     public RectTransform[] skillIcons;         // Assign via Inspector, 5 elements expected
     [Header("Wheel Settings")]
     public float radius = 100f;                // Radius of the circle
+    [Header("Animation Settings")]
+    public float animationDuration = 0.5f;     // Duration of position animation in seconds
 
     // Internal state
     private enum WheelMode { Contracted, Expanded }
     private WheelMode currentMode = WheelMode.Contracted;
 
     // Angles in degrees
-    public float[] contractAngles;
-    public float[] defaultExpandAngles;
+    public float[] contractAngles = {90f, 18f, 306f, 234f, 162f};
+    public float[] defaultExpandAngles = {270f, 225f, 180f, 135f, 90f};
     private float[] cachedExpandAngles;
+
+    // Animation state
+    private Coroutine currentAnimation;
+    private float[] startAngles;
+    private float[] targetAngles;
 
     private void Awake()
     {
-
         // Initialize cache to default expand arrangement
         cachedExpandAngles = new float[defaultExpandAngles.Length];
         defaultExpandAngles.CopyTo(cachedExpandAngles, 0);
+
+        // Prepare angle buffers
+        startAngles = new float[skillIcons.Length];
+        targetAngles = new float[skillIcons.Length];
 
         // Start in contracted mode
         MoveToCompactMode();
     }
 
     [ContextMenu("Move Skills to Compact Mode")]
-    /// <summary>
-    /// Immediately positions skills into their contracted (full-circle) layout.
-    /// </summary>
     public void MoveToCompactMode()
     {
         currentMode = WheelMode.Contracted;
-        SetPositions(contractAngles);
+        AnimateToAngles(contractAngles, forceClockwise: true);
     }
 
     [ContextMenu("Move Skills to Expand Mode")]
-    /// <summary>
-    /// Immediately positions skills into their expanded (half-circle) layout,
-    /// either using the cached angles or the default expand set.
-    /// </summary>
     public void MoveToExpandMode()
     {
         currentMode = WheelMode.Expanded;
-        SetPositions(cachedExpandAngles);
+        AnimateToAngles(cachedExpandAngles, forceClockwise: true);
     }
 
     [ContextMenu("Move Skills to Left")]
-    /// <summary>
-    /// Shift all skills one slot forward (rotating the cached angles left).
-    /// Only valid in expanded mode.
-    /// </summary>
     public void MoveSkillsToLeft()
     {
-        if (currentMode != WheelMode.Expanded)
-            return;
-
-        int n = cachedExpandAngles.Length;
-        float firstAngle = cachedExpandAngles[0];
-        for (int i = 0; i < n - 1; i++)
-        {
-            cachedExpandAngles[i] = cachedExpandAngles[i + 1];
-        }
-        cachedExpandAngles[n - 1] = firstAngle;
-
-        SetPositions(cachedExpandAngles);
+        if (currentMode != WheelMode.Expanded) return;
+        RotateArrayLeft(cachedExpandAngles);
+        AnimateToAngles(cachedExpandAngles, forceClockwise: true);
     }
 
     [ContextMenu("Move Skills Right")]
-    /// <summary>
-    /// Shift all skills one slot backward (rotating the cached angles right).
-    /// Only valid in expanded mode.
-    /// </summary>
     public void MoveSkillsToRight()
     {
-        if (currentMode != WheelMode.Expanded)
-            return;
-
-        int n = cachedExpandAngles.Length;
-        float lastAngle = cachedExpandAngles[n - 1];
-        for (int i = n - 1; i > 0; i--)
-        {
-            cachedExpandAngles[i] = cachedExpandAngles[i - 1];
-        }
-        cachedExpandAngles[0] = lastAngle;
-
-        SetPositions(cachedExpandAngles);
+        if (currentMode != WheelMode.Expanded) return;
+        RotateArrayRight(cachedExpandAngles);
+        AnimateToAngles(cachedExpandAngles, forceClockwise: false);
     }
 
-    /// <summary>
-    /// Calculates and sets the anchored positions based on given angles around the center.
-    /// </summary>
-    private void SetPositions(float[] angles)
+    private void RotateArrayLeft(float[] arr)
     {
+        float first = arr[0];
+        for (int i = 0; i < arr.Length - 1; i++) arr[i] = arr[i + 1];
+        arr[arr.Length - 1] = first;
+    }
+
+    private void RotateArrayRight(float[] arr)
+    {
+        float last = arr[arr.Length - 1];
+        for (int i = arr.Length - 1; i > 0; i--) arr[i] = arr[i - 1];
+        arr[0] = last;
+    }
+
+    private void AnimateToAngles(float[] angles, bool forceClockwise)
+    {
+        // Stop any animation
+        if (currentAnimation != null)
+            StopCoroutine(currentAnimation);
+
+        // Compute start and targetAngles based on direction flag
         for (int i = 0; i < skillIcons.Length; i++)
         {
-            float deg = angles[i];
-            float rad = deg * Mathf.Deg2Rad;
+            Vector2 offset = skillIcons[i].position - (Vector3)center.position;
+            float start = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
+            startAngles[i] = start;
+
+            float target = angles[i] % 360f;
+            float delta = Mathf.DeltaAngle(start, target);
+
+            if (forceClockwise)
+            {
+                if (delta > 0) delta -= 360f;  // ensure CW path
+            }
+            else
+            {
+                if (delta < 0) delta += 360f;  // ensure CCW path
+            }
+
+            targetAngles[i] = start + delta;
+        }
+
+        currentAnimation = StartCoroutine(AnimatePositions(angles));
+    }
+
+    private IEnumerator AnimatePositions(float[] finalAngles)
+    {
+        float elapsed = 0f;
+        while (elapsed < animationDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / animationDuration);
+            float s = Mathf.SmoothStep(0f, 1f, t);
+
+            for (int i = 0; i < skillIcons.Length; i++)
+            {
+                float angle = Mathf.Lerp(startAngles[i], targetAngles[i], s) % 360f;
+                Vector2 pos = new Vector2(
+                    Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
+                    Mathf.Sin(angle * Mathf.Deg2Rad) * radius
+                );
+                skillIcons[i].position = (Vector3)pos + center.position;
+            }
+            yield return null;
+        }
+
+        // Snap exactly to final positions
+        for (int i = 0; i < skillIcons.Length; i++)
+        {
+            float angle = finalAngles[i] % 360f;
             Vector2 pos = new Vector2(
-                Mathf.Cos(rad) * radius + center.position.x,
-                Mathf.Sin(rad) * radius + center.position.y
+                Mathf.Cos(angle * Mathf.Deg2Rad) * radius,
+                Mathf.Sin(angle * Mathf.Deg2Rad) * radius
             );
-            skillIcons[i].position = pos;
+            skillIcons[i].position = (Vector3)pos + center.position;
         }
 
         HighlightSelectedSkill();
+        currentAnimation = null;
     }
 
-    /// <summary>
-    /// Highlights the skill at 270 degrees (downward) when in expanded mode.
-    /// This example simply changes its scale; adapt as needed.
-    /// </summary>
     private void HighlightSelectedSkill()
     {
-        if (currentMode != WheelMode.Expanded)
-            return;
+        if (currentMode != WheelMode.Expanded) return;
+        for (int i = 0; i < skillIcons.Length; i++)
+            skillIcons[i].localScale = Vector3.one;
 
-        // Reset all
-        foreach (var rt in skillIcons)
-        {
-            rt.localScale = Vector3.one;
-        }
-
-        // Find index closest to 180 degrees
-        int selected = 0;
-        float bestDiff = Mathf.Infinity;
+        int sel = 0;
+        float best = Mathf.Infinity;
         for (int i = 0; i < cachedExpandAngles.Length; i++)
         {
-            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
-            if (diff < bestDiff)
-            {
-                bestDiff = diff;
-                selected = i;
-            }
+            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 270f));
+            if (diff < best) { best = diff; sel = i; }
         }
-
-        // Example highlight: enlarge slightly
-        skillIcons[selected].localScale = Vector3.one * 1.2f;
+        skillIcons[sel].localScale = Vector3.one * 1.2f;
     }
 
     private void OnDrawGizmos()
@@ -269,33 +292,4 @@ public class SkillAnimationManager : MonoBehaviour
         UnityEditor.Handles.Label(infoPos, modeInfo, new GUIStyle { normal = { textColor = Color.white } });
 #endif
     }
-    
-    // public float value = 0f; // Value to adjust angles by, can be set in Inspector
-
-
-    // [ContextMenu("Rotate Angles by Degrees Expand")]
-    // public void RotateAnglesByDegreesExpand()
-    // {
-    //     for (int i = 0; i < defaultExpandAngles.Length; i++)
-    //     {
-    //         defaultExpandAngles[i] += value;
-    //         if (defaultExpandAngles[i] >= 360f)
-    //         {
-    //             defaultExpandAngles[i] -= 360f; // Wrap around to keep within 0-360 degrees
-    //         }
-    //     }
-    // }
-
-    // [ContextMenu("Rotate Angles by Degrees Contract")]
-    // public void RotateAnglesByDegreesContract()
-    // {
-    //     for (int i = 0; i < contractAngles.Length; i++)
-    //     {
-    //         contractAngles[i] += value;
-    //         if (contractAngles[i] >= 360f)
-    //         {
-    //             contractAngles[i] -= 360f; // Wrap around to keep within 0-360 degrees
-    //         }
-    //     }
-    // }
 }
