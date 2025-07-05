@@ -3,60 +3,49 @@ using System.Collections;
 
 public class SkillAnimationManager : MonoBehaviour
 {
-    public RectTransform center;          // Assign via Inspector, the center of the wheel
+    public RectTransform center;
+    public RectTransform[] skillIcons;
+    public float radius = 100f;
+    public float animationDuration = 0.5f;
 
-    [Header("Skill Icon Transforms (RectTransforms)")]
-    public RectTransform[] skillIcons;         // Assign via Inspector, 5 elements expected
-    [Header("Wheel Settings")]
-    public float radius = 100f;                // Radius of the circle
-    [Header("Animation Settings")]
-    public float animationDuration = 0.5f;     // Duration of position animation in seconds
-
-    // Internal state
     private enum WheelMode { Contracted, Expanded }
     private WheelMode currentMode = WheelMode.Contracted;
 
-    // Angles in degrees
     public float[] contractAngles = {90f, 18f, 306f, 234f, 162f};
     public float[] defaultExpandAngles = {270f, 225f, 180f, 135f, 90f};
     private float[] cachedExpandAngles;
 
-    // Animation state
     private Coroutine currentAnimation;
     private float[] startAngles;
     private float[] targetAngles;
 
     private void Awake()
     {
-        // Initialize cache to default expand arrangement
+        // Initialize caches
         cachedExpandAngles = new float[defaultExpandAngles.Length];
         defaultExpandAngles.CopyTo(cachedExpandAngles, 0);
-
-        // Prepare angle buffers
         startAngles = new float[skillIcons.Length];
         targetAngles = new float[skillIcons.Length];
 
-        // Start in contracted mode with snapping
-        StartInCompactMode();
-    }
-
-    public void StartInCompactMode()
-    {
-        currentMode = WheelMode.Contracted;
+        // Start snapped in contracted mode
         SnapToAngles(contractAngles);
     }
 
-    public void StartInExpandMode()
-    {
-        currentMode = WheelMode.Expanded;
-        SnapToAngles(cachedExpandAngles);
-    }
-
     [ContextMenu("Move Skills to Compact Mode")]
+    /// <summary>
+    /// Collapse wheel back to contracted layout, choosing sweep direction
+    /// based on Skill1's last expand angle:
+    /// angles 0–180° → sweep clockwise; angles 180–360° → sweep counter-clockwise.
+    /// </summary>
     public void MoveToCompactMode()
     {
         currentMode = WheelMode.Contracted;
-        AnimateToAngles(contractAngles, forceClockwise: true);
+
+        // Determine direction by checking if Skill1's last angle is <=180
+        float lastAngle = cachedExpandAngles[0];
+        bool forceCW = lastAngle > 180f ;
+
+        AnimateToAngles(contractAngles, forceClockwise: forceCW);
     }
 
     [ContextMenu("Move Skills to Expand Mode")]
@@ -82,46 +71,21 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateToAngles(cachedExpandAngles, forceClockwise: false);
     }
 
-    private void RotateArrayLeft(float[] arr)
-    {
-        float first = arr[0];
-        for (int i = 0; i < arr.Length - 1; i++) arr[i] = arr[i + 1];
-        arr[arr.Length - 1] = first;
-    }
-
-    private void RotateArrayRight(float[] arr)
-    {
-        float last = arr[arr.Length - 1];
-        for (int i = arr.Length - 1; i > 0; i--) arr[i] = arr[i - 1];
-        arr[0] = last;
-    }
-
     private void AnimateToAngles(float[] angles, bool forceClockwise)
     {
-        // Stop any animation
         if (currentAnimation != null)
             StopCoroutine(currentAnimation);
 
-        // Compute start and targetAngles based on direction flag
         for (int i = 0; i < skillIcons.Length; i++)
         {
-            Vector2 offset = skillIcons[i].position - (Vector3)center.position;
-            float start = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
-            startAngles[i] = start;
+            Vector2 offset = skillIcons[i].anchoredPosition;
+            startAngles[i] = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
 
             float target = angles[i] % 360f;
-            float delta = Mathf.DeltaAngle(start, target);
-
-            if (forceClockwise)
-            {
-                if (delta > 0) delta -= 360f;  // ensure CW path
-            }
-            else
-            {
-                if (delta < 0) delta += 360f;  // ensure CCW path
-            }
-
-            targetAngles[i] = start + delta;
+            float delta = Mathf.DeltaAngle(startAngles[i], target);
+            if (forceClockwise && delta > 0) delta -= 360f;
+            if (!forceClockwise && delta < 0) delta += 360f;
+            targetAngles[i] = startAngles[i] + delta;
         }
 
         currentAnimation = StartCoroutine(AnimatePositions(angles));
@@ -166,20 +130,44 @@ public class SkillAnimationManager : MonoBehaviour
         HighlightSelectedSkill();
     }
 
+    private void RotateArrayLeft(float[] arr)
+    {
+        float first = arr[0];
+        for (int i = 0; i < arr.Length - 1; i++) arr[i] = arr[i + 1];
+        arr[arr.Length - 1] = first;
+    }
+
+    private void RotateArrayRight(float[] arr)
+    {
+        float last = arr[arr.Length - 1];
+        for (int i = arr.Length - 1; i > 0; i--) arr[i] = arr[i - 1];
+        arr[0] = last;
+    }
+
     private void HighlightSelectedSkill()
     {
         if (currentMode != WheelMode.Expanded) return;
-        for (int i = 0; i < skillIcons.Length; i++)
-            skillIcons[i].localScale = Vector3.one;
+        for (int i = 0; i < skillIcons.Length; i++) skillIcons[i].localScale = Vector3.one;
 
-        int sel = 0;
-        float best = Mathf.Infinity;
+        int sel = 0; float best = Mathf.Infinity;
         for (int i = 0; i < cachedExpandAngles.Length; i++)
         {
             float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 270f));
             if (diff < best) { best = diff; sel = i; }
         }
         skillIcons[sel].localScale = Vector3.one * 1.2f;
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.C))
+            MoveToCompactMode();
+        else if (Input.GetKeyDown(KeyCode.E))
+            MoveToExpandMode();
+        else if (Input.GetKeyDown(KeyCode.A))
+            MoveSkillsToLeft();
+        else if (Input.GetKeyDown(KeyCode.D))
+            MoveSkillsToRight();
     }
     
     private void OnDrawGizmos()
