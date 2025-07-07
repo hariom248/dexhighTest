@@ -5,7 +5,6 @@ public class SkillAnimationManager : MonoBehaviour
 {
     public RectTransform center;
     public RectTransform[] skillIcons;
-    public float radius = 100f;
     public float animationDuration = 0.5f;
 
     private enum WheelMode { Contracted, Expanded }
@@ -23,10 +22,29 @@ public class SkillAnimationManager : MonoBehaviour
     public float[] defaultExpandAngles = { 270f, 225f, 180f, 135f, 90f };
     private float[] cachedExpandAngles;
 
+    private Coroutine centerAnimation;
     private Coroutine currentAnimation;
     private float[] startAngles;
     private float[] targetAngles;
 
+    public RectTransform contractPosition;
+    public RectTransform expandPosition;
+
+    public RectTransform skillsParent;
+
+    public float contractBaseScale = 1f;
+    public float expandBaseScale = 2f;
+
+    public float contractSkillRadius = 100f;
+    public float expandSkillRadius = 75f;
+
+    public float contractSkillScale = 1f;
+    public float expandSkillScale = 0.6f;
+
+    public float highlightedSkillScale = 1f;
+
+    public Vector2 skillsCenterOffsetExpand;
+    public Vector2 skillsCenterOffsetContract;
     public int index;
 
     [ContextMenu("Skill Clicked")]
@@ -44,7 +62,7 @@ public class SkillAnimationManager : MonoBehaviour
         targetAngles = new float[skillIcons.Length];
 
         // Start snapped in contracted mode
-        SnapToAngles(contractAngles);
+        SnapToAngles(contractAngles, contractSkillRadius);
     }
 
     [ContextMenu("Move Skills to Compact Mode")]
@@ -55,6 +73,8 @@ public class SkillAnimationManager : MonoBehaviour
     /// </summary>
     public void MoveToCompactMode()
     {
+        if (currentMode == WheelMode.Contracted) return;
+
         currentMode = WheelMode.Contracted;
 
         // Special case when coming from 135° position
@@ -62,11 +82,16 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateToAngles(contractAngles,
                     useFreePaths ? RotationMode.ShortestPath :
                     RotationMode.ForceCounterClockwise);
+
+        if (centerAnimation != null) StopCoroutine(centerAnimation);
+        centerAnimation = StartCoroutine(AnimateBase());
     }
 
     [ContextMenu("Move Skills to Expand Mode")]
     public void MoveToExpandMode()
     {
+        if (currentMode == WheelMode.Expanded) return;
+
         currentMode = WheelMode.Expanded;
 
         // Special case when returning to 135° position
@@ -74,6 +99,9 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateToAngles(cachedExpandAngles,
                     useFreePaths ? RotationMode.ShortestPath :
                     RotationMode.ForceClockwise);
+
+        if (centerAnimation != null) StopCoroutine(centerAnimation);
+        centerAnimation = StartCoroutine(AnimateBase());
     }
 
 
@@ -106,9 +134,9 @@ public class SkillAnimationManager : MonoBehaviour
             startAngles[i] = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
             // compute target scale
             if (currentMode == WheelMode.Contracted)
-                targetScales[i] = 1f;
+                targetScales[i] = contractSkillScale;
             else
-                targetScales[i] = (Mathf.Abs(Mathf.DeltaAngle(angles[i], 180f)) < 1f) ? 0.75f : 0.5f;
+                targetScales[i] = (Mathf.Abs(Mathf.DeltaAngle(angles[i], 180f)) < 1f) ? highlightedSkillScale : expandSkillScale;
             // compute rotation delta
             float target = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startAngles[i], target);
@@ -138,6 +166,7 @@ public class SkillAnimationManager : MonoBehaviour
     private IEnumerator AnimatePositions(float[] finalAngles, float[] targetScales)
     {
         float elapsed = 0f;
+        float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
         while (elapsed < animationDuration)
         {
             elapsed += Time.deltaTime;
@@ -156,12 +185,35 @@ public class SkillAnimationManager : MonoBehaviour
                 float sc = Mathf.Lerp(skillIcons[i].localScale.x, targetScales[i], s);
                 skillIcons[i].localScale = Vector3.one * sc;
             }
+
             yield return null;
         }
         // finalize
-        SnapToAngles(finalAngles);
+        SnapToAngles(finalAngles, radius);
         SnapToScales(targetScales);
         currentAnimation = null;
+    }
+
+    private IEnumerator AnimateBase()
+    {
+        Vector2 startPos = center.anchoredPosition;
+        Vector2 endPos = currentMode == WheelMode.Expanded ? expandPosition.anchoredPosition : contractPosition.anchoredPosition;
+        float startScale = center.localScale.x;
+        float endScale = currentMode == WheelMode.Expanded ? expandBaseScale : contractBaseScale;
+        Vector2 skillsParentPos = currentMode == WheelMode.Expanded ? skillsCenterOffsetExpand : skillsCenterOffsetContract;
+        float elapsed = 0f;
+        while (elapsed < animationDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
+            center.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+            center.localScale = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+            skillsParent.localPosition =  Vector2.Lerp(skillsParent.localPosition, skillsParentPos, t);
+            yield return null;
+        }
+
+        center.anchoredPosition = endPos;
+        center.localScale = Vector3.one * endScale;
     }
 
     private void SnapToScales(float[] targetScales)
@@ -170,7 +222,7 @@ public class SkillAnimationManager : MonoBehaviour
             skillIcons[i].localScale = Vector3.one * targetScales[i];
     }
 
-    private void SnapToAngles(float[] angles)
+    private void SnapToAngles(float[] angles, float radius)
     {
         for (int i = 0; i < skillIcons.Length; i++)
         {
@@ -288,6 +340,8 @@ public class SkillAnimationManager : MonoBehaviour
 
         centerPosContract.x -= 200f;
 
+        float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
+
         // Draw center point
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(centerPosContract, 5f);
@@ -309,7 +363,7 @@ public class SkillAnimationManager : MonoBehaviour
     private void DrawSkillWheelGizmos(Vector3 centerPos, float[] angles, Color color, string modeName)
     {
         Gizmos.color = color;
-
+        float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
         // Draw circle outline
         Gizmos.DrawWireSphere(centerPos, radius);
 
@@ -374,6 +428,8 @@ public class SkillAnimationManager : MonoBehaviour
         if (center == null || skillIcons == null) return;
 
         Vector3 centerPos = center.position;
+
+        float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
 
         // Draw current skill positions with indices
         Gizmos.color = Color.red;
