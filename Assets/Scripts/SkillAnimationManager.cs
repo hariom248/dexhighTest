@@ -93,20 +93,27 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateToAngles(cachedExpandAngles, RotationMode.ForceCounterClockwise);
     }
 
-    private void AnimateToAngles(float[] angles, RotationMode rotationMode)
+    private void AnimateToAngles(float[] angles, RotationMode mode)
     {
-        if (currentAnimation != null)
-            StopCoroutine(currentAnimation);
+        if (currentAnimation != null) StopCoroutine(currentAnimation);
 
+        var targetScales = new float[skillIcons.Length];
+
+        // record start angles/scales
         for (int i = 0; i < skillIcons.Length; i++)
         {
             Vector2 offset = skillIcons[i].anchoredPosition;
             startAngles[i] = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
-
+            // compute target scale
+            if (currentMode == WheelMode.Contracted)
+                targetScales[i] = 1f;
+            else
+                targetScales[i] = (Mathf.Abs(Mathf.DeltaAngle(angles[i], 180f)) < 1f) ? 0.75f : 0.5f;
+            // compute rotation delta
             float target = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startAngles[i], target);
 
-            switch (rotationMode)
+            switch (mode)
             {
                 case RotationMode.ForceClockwise:
                     if (delta > 0) delta -= 360f;
@@ -125,10 +132,10 @@ public class SkillAnimationManager : MonoBehaviour
             targetAngles[i] = startAngles[i] + delta;
         }
 
-        currentAnimation = StartCoroutine(AnimatePositions(angles));
+        currentAnimation = StartCoroutine(AnimatePositions(angles, targetScales));
     }
 
-    private IEnumerator AnimatePositions(float[] finalAngles)
+    private IEnumerator AnimatePositions(float[] finalAngles, float[] targetScales)
     {
         float elapsed = 0f;
         while (elapsed < animationDuration)
@@ -145,12 +152,22 @@ public class SkillAnimationManager : MonoBehaviour
                     Mathf.Sin(ang * Mathf.Deg2Rad) * radius
                 );
                 skillIcons[i].anchoredPosition = pos;
+                // scale
+                float sc = Mathf.Lerp(skillIcons[i].localScale.x, targetScales[i], s);
+                skillIcons[i].localScale = Vector3.one * sc;
             }
             yield return null;
         }
-
+        // finalize
         SnapToAngles(finalAngles);
+        SnapToScales(targetScales);
         currentAnimation = null;
+    }
+
+    private void SnapToScales(float[] targetScales)
+    {
+        for (int i = 0; i < skillIcons.Length; i++)
+            skillIcons[i].localScale = Vector3.one * targetScales[i];
     }
 
     private void SnapToAngles(float[] angles)
@@ -219,7 +236,7 @@ public class SkillAnimationManager : MonoBehaviour
         int leftSteps = shift;
         int rightSteps = (n - shift) % n;
         
-        RotationMode mode = leftSteps <= rightSteps 
+        RotationMode mode = leftSteps > rightSteps 
             ? RotationMode.ForceCounterClockwise  // Moving left means counter-clockwise
             : RotationMode.ForceClockwise;        // Moving right means clockwise
 
