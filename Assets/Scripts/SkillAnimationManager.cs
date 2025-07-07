@@ -164,7 +164,7 @@ public class SkillAnimationManager : MonoBehaviour
             );
             skillIcons[i].anchoredPosition = pos;
         }
-        HighlightSelectedSkill();
+        UpdateHighlightedSkill();
     }
 
     private void RotateArrayLeft(float[] arr)
@@ -226,18 +226,25 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateToAngles(cachedExpandAngles, mode);
     }
 
-    private void HighlightSelectedSkill()
+    private void UpdateHighlightedSkill()
     {
-        if (currentMode != WheelMode.Expanded) return;
-        for (int i = 0; i < skillIcons.Length; i++) skillIcons[i].localScale = Vector3.one;
-
-        int sel = 0; float best = Mathf.Infinity;
-        for (int i = 0; i < cachedExpandAngles.Length; i++)
+        if (currentMode == WheelMode.Expanded)
         {
-            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
-            if (diff < best) { best = diff; sel = i; }
+            for (int i = 0; i < skillIcons.Length; i++) skillIcons[i].localScale = Vector3.one;
+
+            int sel = 0; float best = Mathf.Infinity;
+            for (int i = 0; i < cachedExpandAngles.Length; i++)
+            {
+                float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
+                if (diff < best) { best = diff; sel = i; }
+            }
+            skillIcons[sel].localScale = Vector3.one * 1.2f;
         }
-        skillIcons[sel].localScale = Vector3.one * 1.2f;
+        else
+        {
+            for (int i = 0; i < skillIcons.Length; i++)
+                skillIcons[i].localScale = Vector3.one;
+        }
     }
 
     private void Update()
