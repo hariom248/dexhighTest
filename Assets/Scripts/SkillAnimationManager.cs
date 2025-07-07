@@ -136,7 +136,7 @@ public class SkillAnimationManager : MonoBehaviour
             if (currentMode == WheelMode.Contracted)
                 targetScales[i] = contractSkillScale;
             else
-                targetScales[i] = (Mathf.Abs(Mathf.DeltaAngle(angles[i], 180f)) < 1f) ? highlightedSkillScale : expandSkillScale;
+                targetScales[i] = GetScaleFromAngle(angles[i]);
             // compute rotation delta
             float target = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startAngles[i], target);
@@ -161,6 +161,12 @@ public class SkillAnimationManager : MonoBehaviour
         }
 
         currentAnimation = StartCoroutine(AnimatePositions(angles, targetScales));
+
+        float GetScaleFromAngle(float angle)
+        {
+            float delta = Mathf.Abs(Mathf.DeltaAngle(angle, 180f)); // distance from center
+            return Mathf.Lerp(highlightedSkillScale, expandSkillScale, delta / 90f); // 1 at 180°, 0.5 at 90° or 270°
+        }
     }
 
     private IEnumerator AnimatePositions(float[] finalAngles, float[] targetScales)
@@ -206,8 +212,8 @@ public class SkillAnimationManager : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
-            center.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-            center.localScale = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+            center.anchoredPosition = Vector2.Lerp(center.anchoredPosition, endPos, t);
+            center.localScale = Vector3.one * Mathf.Lerp(center.localScale.x, endScale, t);
             skillsParent.localPosition =  Vector2.Lerp(skillsParent.localPosition, skillsParentPos, t);
             yield return null;
         }

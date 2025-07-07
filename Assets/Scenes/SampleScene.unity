@@ -896,7 +896,7 @@ MonoBehaviour:
   expandBaseScale: 2
   contractSkillRadius: 92
   expandSkillRadius: 72
-  contractSkillScale: 1.1
+  contractSkillScale: 0.9
   expandSkillScale: 0.5
   highlightedSkillScale: 0.9
   skillsCenterOffsetExpand: {x: 0, y: 10}
