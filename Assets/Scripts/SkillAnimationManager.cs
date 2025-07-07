@@ -27,6 +27,14 @@ public class SkillAnimationManager : MonoBehaviour
     private float[] startAngles;
     private float[] targetAngles;
 
+    public int index;
+
+    [ContextMenu("Skill Clicked")]
+    public void SkillClicked()
+    {
+        SkillClicked(index);
+    }
+
     private void Awake()
     {
         // Initialize caches
@@ -173,6 +181,51 @@ public class SkillAnimationManager : MonoBehaviour
         arr[0] = last;
     }
 
+    public void SkillClicked(int index)
+    {
+        if (currentMode != WheelMode.Expanded) return;
+
+        int n = cachedExpandAngles.Length;
+
+        // Find which slot currently contains the 180° position
+        int currentHighlightedSlot = 0;
+        float bestDiff = Mathf.Infinity;
+        for (int i = 0; i < n; i++)
+        {
+            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
+            if (diff < bestDiff)
+            {
+                bestDiff = diff;
+                currentHighlightedSlot = i;
+            }
+        }
+
+        // Calculate how many steps to rotate to bring clicked skill to highlighted position
+        int shift = (currentHighlightedSlot - index + n) % n;
+        
+        if (shift == 0) return; // Already at target position
+
+        // Create new angles array by rotating
+        float[] newAngles = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            newAngles[i] = cachedExpandAngles[(i + shift) % n];
+        }
+        
+        // Update cached angles
+        cachedExpandAngles = newAngles;
+
+        // Determine rotation direction based on shortest path
+        int leftSteps = shift;
+        int rightSteps = (n - shift) % n;
+        
+        RotationMode mode = leftSteps <= rightSteps 
+            ? RotationMode.ForceCounterClockwise  // Moving left means counter-clockwise
+            : RotationMode.ForceClockwise;        // Moving right means clockwise
+
+        AnimateToAngles(cachedExpandAngles, mode);
+    }
+
     private void HighlightSelectedSkill()
     {
         if (currentMode != WheelMode.Expanded) return;
@@ -181,7 +234,7 @@ public class SkillAnimationManager : MonoBehaviour
         int sel = 0; float best = Mathf.Infinity;
         for (int i = 0; i < cachedExpandAngles.Length; i++)
         {
-            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 270f));
+            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
             if (diff < best) { best = diff; sel = i; }
         }
         skillIcons[sel].localScale = Vector3.one * 1.2f;
@@ -197,6 +250,8 @@ public class SkillAnimationManager : MonoBehaviour
             MoveSkillsToLeft();
         else if (Input.GetKeyDown(KeyCode.D))
             MoveSkillsToRight();
+        else if (Input.GetKeyDown(KeyCode.Space))
+            SkillClicked(index);
     }
     
     private void OnDrawGizmos()
