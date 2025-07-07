@@ -9,10 +9,18 @@ public class SkillAnimationManager : MonoBehaviour
     public float animationDuration = 0.5f;
 
     private enum WheelMode { Contracted, Expanded }
+
+    private enum RotationMode
+    {
+        ForceClockwise,
+        ForceCounterClockwise,
+        ShortestPath
+    }
+
     private WheelMode currentMode = WheelMode.Contracted;
 
-    public float[] contractAngles = {90f, 18f, 306f, 234f, 162f};
-    public float[] defaultExpandAngles = {270f, 225f, 180f, 135f, 90f};
+    public float[] contractAngles = { 90f, 18f, 306f, 234f, 162f };
+    public float[] defaultExpandAngles = { 270f, 225f, 180f, 135f, 90f };
     private float[] cachedExpandAngles;
 
     private Coroutine currentAnimation;
@@ -41,26 +49,32 @@ public class SkillAnimationManager : MonoBehaviour
     {
         currentMode = WheelMode.Contracted;
 
-        // Determine direction by checking if Skill1's last angle is <=180
-        float lastAngle = cachedExpandAngles[0];
-        bool forceCW = lastAngle > 180f ;
-
-        AnimateToAngles(contractAngles, forceClockwise: forceCW);
+        // Special case when coming from 135° position
+        bool useFreePaths = cachedExpandAngles[0] == 135f;
+        AnimateToAngles(contractAngles,
+                    useFreePaths ? RotationMode.ShortestPath :
+                    RotationMode.ForceCounterClockwise);
     }
 
     [ContextMenu("Move Skills to Expand Mode")]
     public void MoveToExpandMode()
     {
         currentMode = WheelMode.Expanded;
-        AnimateToAngles(cachedExpandAngles, forceClockwise: true);
+
+        // Special case when returning to 135° position
+        bool useFreePaths = cachedExpandAngles[0] == 135f;
+        AnimateToAngles(cachedExpandAngles,
+                    useFreePaths ? RotationMode.ShortestPath :
+                    RotationMode.ForceClockwise);
     }
+
 
     [ContextMenu("Move Skills to Left")]
     public void MoveSkillsToLeft()
     {
         if (currentMode != WheelMode.Expanded) return;
         RotateArrayLeft(cachedExpandAngles);
-        AnimateToAngles(cachedExpandAngles, forceClockwise: true);
+        AnimateToAngles(cachedExpandAngles, RotationMode.ForceClockwise);
     }
 
     [ContextMenu("Move Skills Right")]
@@ -68,10 +82,10 @@ public class SkillAnimationManager : MonoBehaviour
     {
         if (currentMode != WheelMode.Expanded) return;
         RotateArrayRight(cachedExpandAngles);
-        AnimateToAngles(cachedExpandAngles, forceClockwise: false);
+        AnimateToAngles(cachedExpandAngles, RotationMode.ForceCounterClockwise);
     }
 
-    private void AnimateToAngles(float[] angles, bool forceClockwise)
+    private void AnimateToAngles(float[] angles, RotationMode rotationMode)
     {
         if (currentAnimation != null)
             StopCoroutine(currentAnimation);
@@ -83,8 +97,23 @@ public class SkillAnimationManager : MonoBehaviour
 
             float target = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startAngles[i], target);
-            if (forceClockwise && delta > 0) delta -= 360f;
-            if (!forceClockwise && delta < 0) delta += 360f;
+
+            switch (rotationMode)
+            {
+                case RotationMode.ForceClockwise:
+                    if (delta > 0) delta -= 360f;
+                    break;
+
+                case RotationMode.ForceCounterClockwise:
+                    if (delta < 0) delta += 360f;
+                    break;
+
+                case RotationMode.ShortestPath:
+                default:
+                    // Keep natural delta for shortest path
+                    break;
+            }
+
             targetAngles[i] = startAngles[i] + delta;
         }
 

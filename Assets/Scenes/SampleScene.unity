@@ -689,7 +689,7 @@ MonoBehaviour:
   - {fileID: 1613032247}
   - {fileID: 1894977693}
   radius: 100
-  animationDuration: 5
+  animationDuration: 2
   contractAngles:
   - 90
   - 18
