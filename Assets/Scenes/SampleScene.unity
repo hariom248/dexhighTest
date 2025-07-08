@@ -119,81 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &329930780
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 329930781}
-  - component: {fileID: 329930783}
-  - component: {fileID: 329930782}
-  m_Layer: 5
-  m_Name: Panel
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &329930781
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 329930780}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1174371337}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &329930782
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 329930780}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.4509804}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: -7942403091375753673, guid: 9fce470fb613f3c4394831bfb0b29dc2, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 1
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &329930783
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 329930780}
-  m_CullTransparentMesh: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -341,7 +266,7 @@ GameObject:
   m_Component:
   - component: {fileID: 578073358}
   m_Layer: 5
-  m_Name: GameObject
+  m_Name: SkillsIconContractPosition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -600,7 +525,7 @@ GameObject:
   - component: {fileID: 737454153}
   - component: {fileID: 737454155}
   m_Layer: 5
-  m_Name: Base
+  m_Name: SkillsBasePanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -689,7 +614,7 @@ GameObject:
   - component: {fileID: 923584674}
   - component: {fileID: 923584675}
   m_Layer: 5
-  m_Name: BG
+  m_Name: BGOverlay
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -995,7 +920,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1083095385}
   m_Layer: 5
-  m_Name: GameObject (1)
+  m_Name: SkillsIconExpandPosition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1020,81 +945,6 @@ RectTransform:
   m_AnchoredPosition: {x: 600, y: -30}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1115933913
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1115933914}
-  - component: {fileID: 1115933916}
-  - component: {fileID: 1115933915}
-  m_Layer: 5
-  m_Name: Panel (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &1115933914
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1115933913}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1174371337}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1115933915
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1115933913}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.7490196}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 1327789590954410095, guid: 52abd103201aa0b478a7f863ee94edab, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 1
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &1115933916
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1115933913}
-  m_CullTransparentMesh: 1
 --- !u!1 &1174371333
 GameObject:
   m_ObjectHideFlags: 0
@@ -1193,8 +1043,6 @@ RectTransform:
   - {fileID: 923584671}
   - {fileID: 737454152}
   - {fileID: 1569438566}
-  - {fileID: 329930781}
-  - {fileID: 1115933914}
   - {fileID: 578073358}
   - {fileID: 1083095385}
   m_Father: {fileID: 0}
@@ -1216,44 +1064,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c79b29c198d1fdc478fca8873fe89b10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  center: {fileID: 1569438566}
-  animationDuration: 0.5
-  contractAngles:
-  - 90
-  - 18
-  - 306
-  - 234
-  - 162
-  defaultExpandAngles:
-  - 270
-  - 225
-  - 180
-  - 135
-  - 90
-  contractPosition: {fileID: 578073358}
-  expandPosition: {fileID: 1083095385}
-  skillsParent: {fileID: 944710291}
-  BGImageCG: {fileID: 923584674}
-  BaseImageCG: {fileID: 737454155}
-  BGImageExpandAlpha: 0.3
-  BaseImageExpandAlpha: 1
-  contractBaseScale: 1
-  expandBaseScale: 2
-  contractSkillRadius: 92
-  expandSkillRadius: 72
-  contractSkillScale: 1.1
-  expandSkillScale: 0.5
-  highlightedSkillScale: 0.9
-  skillsCenterOffsetExpand: {x: 0, y: 10}
-  skillsCenterOffsetContract: {x: 0, y: 0}
-  BGButton: {fileID: 923584675}
-  SkillIconButton: {fileID: 1569438569}
-  skills:
+  SkillsBaseIcon: {fileID: 1569438566}
+  SkillsParent: {fileID: 944710291}
+  Skills:
   - {fileID: 1418749160}
   - {fileID: 1016054829}
   - {fileID: 669673200}
   - {fileID: 1613032251}
   - {fileID: 1894977695}
+  BGOverlay: {fileID: 923584674}
+  SkillsBasePanel: {fileID: 737454155}
+  BGButton: {fileID: 923584675}
+  SkillsBaseIconButton: {fileID: 1569438569}
+  animationDuration: 0.5
+  highlightedSkillScale: 0.9
   ContractSettings:
     Angles:
     - 90
@@ -1263,10 +1087,10 @@ MonoBehaviour:
     - 162
     Radius: 92
     SkillScale: 1.1
-    BaseScale: 1
-    BGAlpha: 0
-    BaseAlpha: 0
-    CenterOffset: {x: 0, y: 0}
+    SkillsBaseIconScale: 1
+    BGOverlayAlpha: 0
+    SkillsBasePanelAlpha: 0
+    SkillsParentOffset: {x: 0, y: 0}
     CenterPosition: {fileID: 578073358}
   ExpandSettings:
     Angles:
@@ -1277,10 +1101,10 @@ MonoBehaviour:
     - 90
     Radius: 72
     SkillScale: 0.5
-    BaseScale: 2
-    BGAlpha: 0.3
-    BaseAlpha: 1
-    CenterOffset: {x: 0, y: 10}
+    SkillsBaseIconScale: 2
+    BGOverlayAlpha: 0.3
+    SkillsBasePanelAlpha: 1
+    SkillsParentOffset: {x: 0, y: 10}
     CenterPosition: {fileID: 1083095385}
 --- !u!1 &1418749155
 GameObject:
@@ -1432,7 +1256,7 @@ GameObject:
   - component: {fileID: 1569438567}
   - component: {fileID: 1569438569}
   m_Layer: 5
-  m_Name: Skills
+  m_Name: SkillsBaseIcon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

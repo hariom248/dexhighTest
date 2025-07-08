@@ -6,10 +6,10 @@ public struct WheelSettings
     public float[] Angles;
     public float  Radius;
     public float  SkillScale;
-    public float  BaseScale;
-    public float  BGAlpha;
-    public float  BaseAlpha;
-    public Vector2 CenterOffset;
+    public float  SkillsBaseIconScale;
+    public float  BGOverlayAlpha;
+    public float  SkillsBasePanelAlpha;
+    public Vector2 SkillsParentOffset;
     public RectTransform CenterPosition;
 
     public WheelSettings(
@@ -26,10 +26,13 @@ public struct WheelSettings
         Angles = (float[])angles.Clone();
         Radius = radius;
         SkillScale = skillScale;
-        BaseScale = baseScale;
-        BGAlpha = bgAlpha;
-        BaseAlpha = baseAlpha;
-        CenterOffset = centerOffset;
+        SkillsBaseIconScale = baseScale;
+        BGOverlayAlpha = bgAlpha;
+        SkillsBasePanelAlpha = baseAlpha;
+        SkillsParentOffset = centerOffset;
         CenterPosition = centerPosition;
     }
+
+     public WheelSettings WithAngles(float[] newAngles)
+        => new WheelSettings(newAngles, Radius, SkillScale, SkillsBaseIconScale, BGOverlayAlpha, SkillsBasePanelAlpha, SkillsParentOffset, CenterPosition);
 }

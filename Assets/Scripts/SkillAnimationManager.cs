@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,16 +5,16 @@ using UnityEngine.UI;
 public class SkillAnimationManager : MonoBehaviour
 {
     [Header("Core References")]
-    public RectTransform center;
-    public RectTransform skillsParent;
-    public Skill[] skills;
+    public RectTransform SkillsBaseIcon;
+    public RectTransform SkillsParent;
+    public Skill[] Skills;
 
-    public CanvasGroup BGImageCG;
-    public CanvasGroup BaseImageCG;
+    public CanvasGroup BGOverlay;
+    public CanvasGroup SkillsBasePanel;
 
     [Header("Buttons")]
     public Button BGButton;
-    public Button SkillIconButton;
+    public Button SkillsBaseIconButton;
 
     [Header("Animation")]
     public float animationDuration = 0.5f;
@@ -38,25 +37,25 @@ public class SkillAnimationManager : MonoBehaviour
     void Awake()
     {
         // sanity check
-        if (ContractSettings.Angles.Length != skills.Length ||
-            ExpandSettings.Angles.Length  != skills.Length)
+        if (ContractSettings.Angles.Length != Skills.Length ||
+            ExpandSettings.Angles.Length  != Skills.Length)
         {
             Debug.LogError("WheelSettings.Angles length must match number of skills!");
         }
 
         // cache transforms & hook clicks
-        skillIcons = new RectTransform[skills.Length];
-        for (int i = 0; i < skills.Length; i++)
+        skillIcons = new RectTransform[Skills.Length];
+        for (int i = 0; i < Skills.Length; i++)
         {
-            skills[i].SetActiveStatus(false, false);
+            Skills[i].SetActiveStatus(false, false);
             int idx = i;
-            skills[i].Button.onClick.AddListener(() => OnSkillClicked(idx));
-            skillIcons[i] = skills[i].GetComponent<RectTransform>();
+            Skills[i].Button.onClick.AddListener(() => OnSkillClicked(idx));
+            skillIcons[i] = Skills[i].GetComponent<RectTransform>();
         }
 
         // wire up transitions
         BGButton.onClick.AddListener(() => Transition(false));
-        SkillIconButton.onClick.AddListener(() => Transition(true));
+        SkillsBaseIconButton.onClick.AddListener(() => Transition(true));
 
         // cache expand angles
         cachedExpandAngles = (float[])ExpandSettings.Angles.Clone();
@@ -64,9 +63,6 @@ public class SkillAnimationManager : MonoBehaviour
         // initial snap
         SnapLayout(ContractSettings);
     }
-
-    public void MoveToCompactMode() => Transition(false);
-    public void MoveToExpandMode()  => Transition(true);
 
     private void Transition(bool toExpand)
     {
@@ -84,9 +80,7 @@ public class SkillAnimationManager : MonoBehaviour
                 : RotationMode.ForceCounterClockwise);
 
         // build target settings (clone angles if needed)
-        WheelSettings target = to;
-        if (toExpand)
-            target.Angles = (float[])cachedExpandAngles.Clone();
+        var target = toExpand ? to.WithAngles(cachedExpandAngles) : to;
 
         AnimateSkills(from, target, mode);
         AnimateBase(to);
@@ -149,16 +143,16 @@ public class SkillAnimationManager : MonoBehaviour
 
     private IEnumerator DoAnimateBase(WheelSettings s)
     {
-        var startPos    = center.anchoredPosition;
+        var startPos    = SkillsBaseIcon.anchoredPosition;
         var endPos      = s.CenterPosition.anchoredPosition;
-        var startScale  = center.localScale.x;
-        var endScale    = s.BaseScale;
-        var startSkills = skillsParent.anchoredPosition;
-        var endSkills   = s.CenterOffset;
-        var bgStart     = BGImageCG.alpha;
-        var bgEnd       = s.BGAlpha;
-        var baseStart   = BaseImageCG.alpha;
-        var baseEnd     = s.BaseAlpha;
+        var startScale  = SkillsBaseIcon.localScale.x;
+        var endScale    = s.SkillsBaseIconScale;
+        var startSkills = SkillsParent.anchoredPosition;
+        var endSkills   = s.SkillsParentOffset;
+        var bgStart     = BGOverlay.alpha;
+        var bgEnd       = s.BGOverlayAlpha;
+        var baseStart   = SkillsBasePanel.alpha;
+        var baseEnd     = s.SkillsBasePanelAlpha;
 
         float elapsed = 0f;
         while (elapsed < animationDuration)
@@ -166,20 +160,20 @@ public class SkillAnimationManager : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
 
-            center.anchoredPosition       = Vector2.Lerp(startPos, endPos, t);
-            center.localScale             = Vector3.one * Mathf.Lerp(startScale, endScale, t);
-            skillsParent.anchoredPosition = Vector2.Lerp(startSkills, endSkills, t);
-            BGImageCG.alpha               = Mathf.Lerp(bgStart, s.BGAlpha, t);
-            BaseImageCG.alpha             = Mathf.Lerp(baseStart, s.BaseAlpha, t);
+            SkillsBaseIcon.anchoredPosition       = Vector2.Lerp(startPos, endPos, t);
+            SkillsBaseIcon.localScale             = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+            SkillsParent.anchoredPosition = Vector2.Lerp(startSkills, endSkills, t);
+            BGOverlay.alpha               = Mathf.Lerp(bgStart, s.BGOverlayAlpha, t);
+            SkillsBasePanel.alpha             = Mathf.Lerp(baseStart, s.SkillsBasePanelAlpha, t);
 
             yield return null;
         }
 
-        center.anchoredPosition       = endPos;
-        center.localScale             = Vector3.one * endScale;
-        skillsParent.anchoredPosition = endSkills;
-        BGImageCG.alpha               = s.BGAlpha;
-        BaseImageCG.alpha             = s.BaseAlpha;
+        SkillsBaseIcon.anchoredPosition       = endPos;
+        SkillsBaseIcon.localScale             = Vector3.one * endScale;
+        SkillsParent.anchoredPosition = endSkills;
+        BGOverlay.alpha               = s.BGOverlayAlpha;
+        SkillsBasePanel.alpha             = s.SkillsBasePanelAlpha;
 
         baseAnimCoroutine = null;
     }
@@ -201,11 +195,11 @@ public class SkillAnimationManager : MonoBehaviour
 
     private void SnapBase(WheelSettings s)
     {
-        center.anchoredPosition       = s.CenterPosition.anchoredPosition;
-        center.localScale             = Vector3.one * s.BaseScale;
-        skillsParent.anchoredPosition = s.CenterOffset;
-        BGImageCG.alpha               = s.BGAlpha;
-        BaseImageCG.alpha             = s.BaseAlpha;
+        SkillsBaseIcon.anchoredPosition       = s.CenterPosition.anchoredPosition;
+        SkillsBaseIcon.localScale             = Vector3.one * s.SkillsBaseIconScale;
+        SkillsParent.anchoredPosition = s.SkillsParentOffset;
+        BGOverlay.alpha               = s.BGOverlayAlpha;
+        SkillsBasePanel.alpha             = s.SkillsBasePanelAlpha;
     }
 
     private void OnSkillClicked(int index)
@@ -229,15 +223,14 @@ public class SkillAnimationManager : MonoBehaviour
             : RotationMode.ForceCounterClockwise;
 
         // animate with updated angles
-        var to = ExpandSettings;
-        to.Angles = newAngles;
+        var to = ExpandSettings.WithAngles(cachedExpandAngles);
         AnimateSkills(ExpandSettings, to, mode);
     }
 
     private void UpdateHighlights()
     {
-        for (int i = 0; i < skills.Length; i++)
-            skills[i].SetActiveStatus(i == highlightedSkillIndex && isExpanded, isExpanded);
+        for (int i = 0; i < Skills.Length; i++)
+            Skills[i].SetActiveStatus(i == highlightedSkillIndex && isExpanded, isExpanded);
     }
 
     // ─────────── Helpers ───────────
@@ -266,7 +259,7 @@ public class SkillAnimationManager : MonoBehaviour
         if (!isExpanded) 
             return baseScale;
 
-        int n = skills.Length;
+        int n = Skills.Length;
         if (idx == highlightedSkillIndex)
             return highlightedSkillScale;
         if ((idx + 1) % n == highlightedSkillIndex ||
