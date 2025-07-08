@@ -30,8 +30,8 @@ public class SkillAnimationManager : MonoBehaviour
     private int highlightedSkillIndex = 2;
     private bool isExpanded = false;
 
-    private Coroutine wheelAnim;
-    private Coroutine baseAnim;
+    private Coroutine skillsAnimCoroutine;
+    private Coroutine baseAnimCoroutine;
 
     private void Awake()
     {
@@ -61,6 +61,8 @@ public class SkillAnimationManager : MonoBehaviour
 
     private void Transition(bool toExpand)
     {
+        if(isExpanded == toExpand) return;
+
         // update flag explicitly
         isExpanded = toExpand;
 
@@ -69,36 +71,35 @@ public class SkillAnimationManager : MonoBehaviour
         var to   = toExpand ? ExpandSettings   : ContractSettings;
 
         // choose rotation rule
-        bool freePath = Mathf.Approximately(cachedExpandAngles[0], 135f);
-        var mode = freePath
+        var mode = Mathf.Approximately(cachedExpandAngles[0], 135f)
             ? RotationMode.ShortestPath
             : (toExpand
                 ? RotationMode.ForceClockwise
                 : RotationMode.ForceCounterClockwise);
 
         // pick angles array
-        var angles = toExpand ? cachedExpandAngles : to.Angles;
-
-        AnimateWheel(from, to, angles, mode);
+        if (isExpanded)
+        {
+            var newSettings = to;
+            newSettings.Angles = cachedExpandAngles;
+            AnimateSkills(from, newSettings, mode);
+        }
+        else
+        {
+            AnimateSkills(from, to, mode);
+        }
         AnimateBase(to);
     }
 
-    private void AnimateWheel(
-        WheelSettings from,
-        WheelSettings to,
-        float[] finalAngles,
-        RotationMode mode)
+    private void AnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
-        if (wheelAnim != null) StopCoroutine(wheelAnim);
-        wheelAnim = StartCoroutine(DoAnimateWheel(from, to, finalAngles, mode));
+        if (skillsAnimCoroutine != null) StopCoroutine(skillsAnimCoroutine);
+        skillsAnimCoroutine = StartCoroutine(DoAnimateWheel(from, to, mode));
     }
 
-    private IEnumerator DoAnimateWheel(
-        WheelSettings from,
-        WheelSettings to,
-        float[] finalAngles,
-        RotationMode mode)
+    private IEnumerator DoAnimateWheel(WheelSettings from, WheelSettings to, RotationMode mode)
     {
+        var angles = to.Angles;
         int n = skillIcons.Length;
         var startA  = new float[n];
         var targetA = new float[n];
@@ -106,18 +107,17 @@ public class SkillAnimationManager : MonoBehaviour
 
         for (int i = 0; i < n; i++)
         {
-            // capture start angle
+            // position angle delta
             Vector2 off = skillIcons[i].anchoredPosition;
             startA[i] = Mathf.Atan2(off.y, off.x) * Mathf.Rad2Deg;
 
-            // compute shortest/forced rotation
-            float dest = finalAngles[i] % 360f;
+            float dest  = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startA[i], dest);
             if (mode == RotationMode.ForceClockwise && delta > 0) delta -= 360f;
             if (mode == RotationMode.ForceCounterClockwise && delta < 0) delta += 360f;
             targetA[i] = startA[i] + delta;
 
-            // assign target scale based on explicit flag
+            // scale
             targetS[i] = isExpanded
                 ? GetExpandedScale(i, to.SkillScale)
                 : to.SkillScale;
@@ -125,6 +125,7 @@ public class SkillAnimationManager : MonoBehaviour
 
         float elapsed = 0f;
         UpdateHighlights();
+
         while (elapsed < animationDuration)
         {
             elapsed += Time.deltaTime;
@@ -132,32 +133,30 @@ public class SkillAnimationManager : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                // position
-                float ang    = Mathf.Lerp(startA[i], targetA[i], t) * Mathf.Deg2Rad;
+                float ang = Mathf.Lerp(startA[i], targetA[i], t) * Mathf.Deg2Rad;
                 float radius = Mathf.Lerp(from.Radius, to.Radius, t);
+
                 skillIcons[i].anchoredPosition = new Vector2(
                     Mathf.Cos(ang), Mathf.Sin(ang)
                 ) * radius;
 
-                // scale
-                float scOld = skillIcons[i].localScale.x;
-                float scNew = targetS[i];
-                skillIcons[i].localScale = Vector3.one * Mathf.Lerp(scOld, scNew, t);
+                float sc = Mathf.Lerp(skillIcons[i].localScale.x, targetS[i], t);
+                skillIcons[i].localScale = Vector3.one * sc;
             }
 
             yield return null;
         }
 
-        // finalize
-        SnapAngles(finalAngles, to.Radius);
+        // Snap to new state
+        SnapAngles(angles, to.Radius);
         SnapScales(targetS);
-        wheelAnim = null;
+        skillsAnimCoroutine = null;
     }
 
     private void AnimateBase(WheelSettings s)
     {
-        if (baseAnim != null) StopCoroutine(baseAnim);
-        baseAnim = StartCoroutine(DoAnimateBase(s));
+        if (baseAnimCoroutine != null) StopCoroutine(baseAnimCoroutine);
+        baseAnimCoroutine = StartCoroutine(DoAnimateBase(s));
     }
 
     private IEnumerator DoAnimateBase(WheelSettings s)
@@ -195,7 +194,7 @@ public class SkillAnimationManager : MonoBehaviour
         BGImageCG.alpha               = endBG;
         BaseImageCG.alpha             = endBaseBG;
 
-        baseAnim = null;
+        baseAnimCoroutine = null;
     }
 
     private void SnapToState(WheelSettings s, bool expanded)
@@ -259,7 +258,10 @@ public class SkillAnimationManager : MonoBehaviour
             ? RotationMode.ForceClockwise
             : RotationMode.ForceCounterClockwise;
 
-        AnimateWheel(ExpandSettings, ExpandSettings, cachedExpandAngles, mode);
+        var newSettings = ExpandSettings;
+        newSettings.Angles = cachedExpandAngles;
+
+        AnimateSkills(ExpandSettings, newSettings, mode);
     }
 
     private void UpdateHighlights()
