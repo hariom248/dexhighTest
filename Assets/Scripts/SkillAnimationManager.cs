@@ -1,6 +1,6 @@
 using UnityEngine;
-using System.Collections;
 using UnityEngine.UI;
+using System.Collections;
 
 public class SkillAnimationManager : MonoBehaviour
 {
@@ -57,6 +57,9 @@ public class SkillAnimationManager : MonoBehaviour
     public Button SkillIconButton;
     
     public Skill[] skills; // Array of Skill components for interaction
+
+    // Cache the highlighted skill index (default is 2 for 180° position)
+    private int highlightedSkillIndex = 2;
 
     private void Awake()
     {
@@ -121,22 +124,6 @@ public class SkillAnimationManager : MonoBehaviour
     }
 
 
-    [ContextMenu("Move Skills to Left")]
-    public void MoveSkillsToLeft()
-    {
-        if (currentMode != WheelMode.Expanded) return;
-        RotateArrayLeft(cachedExpandAngles);
-        AnimateToAngles(cachedExpandAngles, RotationMode.ForceClockwise);
-    }
-
-    [ContextMenu("Move Skills Right")]
-    public void MoveSkillsToRight()
-    {
-        if (currentMode != WheelMode.Expanded) return;
-        RotateArrayRight(cachedExpandAngles);
-        AnimateToAngles(cachedExpandAngles, RotationMode.ForceCounterClockwise);
-    }
-
     private void AnimateToAngles(float[] angles, RotationMode mode)
     {
         if (currentAnimation != null) StopCoroutine(currentAnimation);
@@ -152,7 +139,7 @@ public class SkillAnimationManager : MonoBehaviour
             if (currentMode == WheelMode.Contracted)
                 targetScales[i] = contractSkillScale;
             else
-                targetScales[i] = GetScaleFromAngle(angles[i]);
+                targetScales[i] = GetScaleFromIndex(i);
             // compute rotation delta
             float target = angles[i] % 360f;
             float delta = Mathf.DeltaAngle(startAngles[i], target);
@@ -178,10 +165,20 @@ public class SkillAnimationManager : MonoBehaviour
 
         currentAnimation = StartCoroutine(AnimatePositions(angles, targetScales));
 
-        float GetScaleFromAngle(float angle)
+        float GetScaleFromIndex(int index)
         {
-            float delta = Mathf.Abs(Mathf.DeltaAngle(angle, 180f)); // distance from center
-            return Mathf.Lerp(highlightedSkillScale, expandSkillScale, delta / 90f); // 1 at 180°, 0.5 at 90° or 270°
+            if (index == highlightedSkillIndex)
+            {
+                return highlightedSkillScale;
+            }
+            else if (index - 1 == highlightedSkillIndex || index + 1 == highlightedSkillIndex)
+            {
+                return (highlightedSkillScale + expandSkillScale) * 0.5f;
+            }
+            else
+            {
+                return expandSkillScale;
+            }
         }
     }
 
@@ -189,6 +186,7 @@ public class SkillAnimationManager : MonoBehaviour
     {
         float elapsed = 0f;
         float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
+        UpdateHighlightedSkill();
         while (elapsed < animationDuration)
         {
             elapsed += Time.deltaTime;
@@ -230,7 +228,7 @@ public class SkillAnimationManager : MonoBehaviour
             float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
             center.anchoredPosition = Vector2.Lerp(center.anchoredPosition, endPos, t);
             center.localScale = Vector3.one * Mathf.Lerp(center.localScale.x, endScale, t);
-            skillsParent.localPosition =  Vector2.Lerp(skillsParent.localPosition, skillsParentPos, t);
+            skillsParent.localPosition = Vector2.Lerp(skillsParent.localPosition, skillsParentPos, t);
             BGImageCG.alpha = Mathf.Lerp(BGImageCG.alpha, bgImageAlpha, t);
             BaseImageCG.alpha = Mathf.Lerp(BaseImageCG.alpha, baseImageAlpha, t);
             yield return null;
@@ -257,64 +255,41 @@ public class SkillAnimationManager : MonoBehaviour
             );
             skillIcons[i].anchoredPosition = pos;
         }
-        UpdateHighlightedSkill();
-    }
-
-    private void RotateArrayLeft(float[] arr)
-    {
-        float first = arr[0];
-        for (int i = 0; i < arr.Length - 1; i++) arr[i] = arr[i + 1];
-        arr[arr.Length - 1] = first;
-    }
-
-    private void RotateArrayRight(float[] arr)
-    {
-        float last = arr[arr.Length - 1];
-        for (int i = arr.Length - 1; i > 0; i--) arr[i] = arr[i - 1];
-        arr[0] = last;
     }
 
     public void SkillClicked(int index)
     {
         if (currentMode != WheelMode.Expanded) return;
 
+        if (index == highlightedSkillIndex) return; 
+
         int n = cachedExpandAngles.Length;
 
-        // Find which slot currently contains the 180° position
-        int currentHighlightedSlot = 0;
-        float bestDiff = Mathf.Infinity;
-        for (int i = 0; i < n; i++)
-        {
-            float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
-            if (diff < bestDiff)
-            {
-                bestDiff = diff;
-                currentHighlightedSlot = i;
-            }
-        }
-
         // Calculate how many steps to rotate to bring clicked skill to highlighted position
-        int shift = (currentHighlightedSlot - index + n) % n;
+        int stepsToRotate = (highlightedSkillIndex - index + n) % n;
         
-        if (shift == 0) return; // Already at target position
+        if (stepsToRotate == 0) return; // Already at target position
 
         // Create new angles array by rotating
         float[] newAngles = new float[n];
         for (int i = 0; i < n; i++)
         {
-            newAngles[i] = cachedExpandAngles[(i + shift) % n];
+            newAngles[i] = cachedExpandAngles[(i + stepsToRotate) % n];
         }
         
         // Update cached angles
         cachedExpandAngles = newAngles;
 
+        // Update highlighted skill index - the clicked skill is now at the highlighted position
+        highlightedSkillIndex = index;
+
         // Determine rotation direction based on shortest path
-        int leftSteps = shift;
-        int rightSteps = (n - shift) % n;
+        int forwardSteps = stepsToRotate;
+        int backwardSteps = (n - stepsToRotate) % n;
         
-        RotationMode mode = leftSteps > rightSteps 
-            ? RotationMode.ForceCounterClockwise  // Moving left means counter-clockwise
-            : RotationMode.ForceClockwise;        // Moving right means clockwise
+        RotationMode mode = forwardSteps <= backwardSteps 
+            ? RotationMode.ForceClockwise      // Forward/left shift = clockwise
+            : RotationMode.ForceCounterClockwise;  // Backward/right shift = counter-clockwise
 
         AnimateToAngles(cachedExpandAngles, mode);
     }
@@ -329,25 +304,11 @@ public class SkillAnimationManager : MonoBehaviour
             }
             else
             {
-                float angle = cachedExpandAngles[i];
-                bool isHighlighted = Mathf.Abs(Mathf.DeltaAngle(angle, 180f)) < 10f; // Highlight if within 10° of 180°
+                // Use cached highlighted skill index instead of calculating from 180°
+                bool isHighlighted = i == highlightedSkillIndex;
                 skills[i].SetActiveStatus(isHighlighted, true);
             }
         }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.C))
-            MoveToCompactMode();
-        else if (Input.GetKeyDown(KeyCode.E))
-            MoveToExpandMode();
-        else if (Input.GetKeyDown(KeyCode.A))
-            MoveSkillsToLeft();
-        else if (Input.GetKeyDown(KeyCode.D))
-            MoveSkillsToRight();
-        else if (Input.GetKeyDown(KeyCode.Space))
-            SkillClicked(0);
     }
     
     private void OnDrawGizmos()
