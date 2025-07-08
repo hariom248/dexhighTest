@@ -34,17 +34,27 @@ public class SkillAnimationManager : MonoBehaviour
     private Coroutine skillsAnimCoroutine;
     private Coroutine baseAnimCoroutine;
 
-    void Awake()
+    private void Awake()
     {
-        // sanity check
-        if (ContractSettings.Angles.Length != Skills.Length ||
+        ValidateConfiguration();
+        InitializeSkillSystem();
+        SnapLayout(ContractSettings);
+    }
+
+    private void ValidateConfiguration()
+    {
+        if (ContractSettings.Angles.Length != Skills.Length || 
             ExpandSettings.Angles.Length != Skills.Length)
         {
-            Debug.LogError("WheelSettings.Angles length must match number of skills!");
+            Debug.LogError("WheelSettings angles length must match number of skills!");
         }
+    }
 
-        // cache transforms & hook clicks
+    private void InitializeSkillSystem()
+    {
         skillIcons = new RectTransform[Skills.Length];
+        cachedExpandAngles = (float[])ExpandSettings.Angles.Clone();
+
         for (int i = 0; i < Skills.Length; i++)
         {
             Skills[i].SetActiveStatus(false, false);
@@ -53,15 +63,9 @@ public class SkillAnimationManager : MonoBehaviour
             skillIcons[i] = Skills[i].GetComponent<RectTransform>();
         }
 
-        // wire up transitions
+         // wire up transitions
         BGButton.onClick.AddListener(() => Transition(false));
         SkillsBaseIconButton.onClick.AddListener(() => Transition(true));
-
-        // cache expand angles
-        cachedExpandAngles = (float[])ExpandSettings.Angles.Clone();
-
-        // initial snap
-        SnapLayout(ContractSettings);
     }
 
     /// <summary>
