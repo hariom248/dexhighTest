@@ -21,7 +21,7 @@ public class SkillAnimationManager : MonoBehaviour
     public float HighlightedSkillScale;
 
     [Header("Wheel Settings")]
-    public WheelSettings ContractSettings; // ensure Angles.Length == skills.Length
+    public WheelSettings ContractSettings; 
     public WheelSettings ExpandSettings;
 
     private enum RotationMode { ForceClockwise, ForceCounterClockwise, ShortestPath }
@@ -80,14 +80,13 @@ public class SkillAnimationManager : MonoBehaviour
         var from = toExpand ? ContractSettings : ExpandSettings;
         var to = toExpand ? ExpandSettings : ContractSettings;
 
-        // choose rotation rule
         RotationMode mode = Mathf.Approximately(cachedExpandAngles[0], 135f)
             ? RotationMode.ShortestPath
             : (toExpand
                 ? RotationMode.ForceClockwise
                 : RotationMode.ForceCounterClockwise);
 
-        // build target settings (clone angles if needed)
+        // build target settings
         var target = toExpand ? to.WithAngles(cachedExpandAngles) : to;
 
         AnimateSkills(from, target, mode);
@@ -107,7 +106,6 @@ public class SkillAnimationManager : MonoBehaviour
         int steps = (highlightedSkillIndex - index + n) % n;
         if (steps == 0) return;
 
-        // rotate cache
         var newAngles = new float[n];
         for (int i = 0; i < n; i++)
             newAngles[i] = cachedExpandAngles[(i + steps) % n];
@@ -118,8 +116,7 @@ public class SkillAnimationManager : MonoBehaviour
         var mode = (steps <= n - steps)
             ? RotationMode.ForceClockwise
             : RotationMode.ForceCounterClockwise;
-
-        // animate with updated angles
+        
         var to = ExpandSettings.WithAngles(cachedExpandAngles);
         AnimateSkills(ExpandSettings, to, mode);
     }
@@ -144,7 +141,6 @@ public class SkillAnimationManager : MonoBehaviour
         var targetAngles = new float[n];
         var targetScales = new float[n];
 
-        // prepare
         for (int i = 0; i < n; i++)
         {
             startAngles[i] = CartesianToAngle(skillIcons[i].anchoredPosition);
@@ -173,7 +169,6 @@ public class SkillAnimationManager : MonoBehaviour
             yield return null;
         }
 
-        // Snap to new state
         SnapSkills(to);
         skillsAnimCoroutine = null;
     }
@@ -231,7 +226,6 @@ public class SkillAnimationManager : MonoBehaviour
     /// Snaps the layout to the specified WheelSettings.
     /// This is used to ensure the layout is correct after initialization or when settings change.
     /// </summary>
-    /// <param name="s"></param>
     private void SnapLayout(WheelSettings s)
     {
         SnapSkills(s);
@@ -241,7 +235,6 @@ public class SkillAnimationManager : MonoBehaviour
     /// <summary>
     /// Snaps the skill icons to their positions and scales based on the provided WheelSettings.
     /// </summary>
-    /// <param name="s"></param>
     private void SnapSkills(WheelSettings s)
     {
         for (int i = 0; i < skillIcons.Length; i++)
@@ -254,7 +247,6 @@ public class SkillAnimationManager : MonoBehaviour
     /// <summary>
     /// Snaps the base icon and related UI elements to their positions and scales based on the provided WheelSettings.
     /// </summary>
-    /// <param name="s"></param>
     private void SnapBaseIcon(WheelSettings s)
     {
         SkillsBaseIcon.anchoredPosition = s.CenterPosition.anchoredPosition;
