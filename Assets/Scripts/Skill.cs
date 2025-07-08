@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class Skill : MonoBehaviour
 {
+    [Header("References")]
     public Image Image;
     public Sprite ActiveSprite;
     public Sprite InactiveSprite;
