@@ -1,10 +1,11 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public class SkillAnimationManager : MonoBehaviour
 {
     public RectTransform center;
-    public RectTransform[] skillIcons;
+    private RectTransform[] skillIcons;
     public float animationDuration = 0.5f;
 
     private enum WheelMode { Contracted, Expanded }
@@ -32,6 +33,12 @@ public class SkillAnimationManager : MonoBehaviour
 
     public RectTransform skillsParent;
 
+    public CanvasGroup BGImageCG;
+    public CanvasGroup BaseImageCG;
+
+    public float BGImageExpandAlpha = 0.3f;
+    public float BaseImageExpandAlpha = 1f;
+
     public float contractBaseScale = 1f;
     public float expandBaseScale = 2f;
 
@@ -45,16 +52,25 @@ public class SkillAnimationManager : MonoBehaviour
 
     public Vector2 skillsCenterOffsetExpand;
     public Vector2 skillsCenterOffsetContract;
-    public int index;
 
-    [ContextMenu("Skill Clicked")]
-    public void SkillClicked()
-    {
-        SkillClicked(index);
-    }
+    public Button BGButton;
+    public Button SkillIconButton;
+    
+    public Skill[] skills; // Array of Skill components for interaction
 
     private void Awake()
     {
+        skillIcons = new RectTransform[skills.Length];
+        for (int i = 0; i < skills.Length; i++)
+        {
+            // Set initial positions and scales
+            skills[i].SetActiveStatus(false, false);
+            int j = i;
+            skills[i].Button.onClick.AddListener(() => SkillClicked(j));
+            skillIcons[i] = skills[i].GetComponent<RectTransform>();
+        }
+        BGButton.onClick.AddListener(MoveToCompactMode);
+        SkillIconButton.onClick.AddListener(MoveToExpandMode);
         // Initialize caches
         cachedExpandAngles = new float[defaultExpandAngles.Length];
         defaultExpandAngles.CopyTo(cachedExpandAngles, 0);
@@ -202,11 +218,11 @@ public class SkillAnimationManager : MonoBehaviour
 
     private IEnumerator AnimateBase()
     {
-        Vector2 startPos = center.anchoredPosition;
         Vector2 endPos = currentMode == WheelMode.Expanded ? expandPosition.anchoredPosition : contractPosition.anchoredPosition;
-        float startScale = center.localScale.x;
         float endScale = currentMode == WheelMode.Expanded ? expandBaseScale : contractBaseScale;
         Vector2 skillsParentPos = currentMode == WheelMode.Expanded ? skillsCenterOffsetExpand : skillsCenterOffsetContract;
+        float bgImageAlpha = currentMode == WheelMode.Expanded ? BGImageExpandAlpha : 0f;
+        float baseImageAlpha = currentMode == WheelMode.Expanded ? BaseImageExpandAlpha : 0f;
         float elapsed = 0f;
         while (elapsed < animationDuration)
         {
@@ -215,6 +231,8 @@ public class SkillAnimationManager : MonoBehaviour
             center.anchoredPosition = Vector2.Lerp(center.anchoredPosition, endPos, t);
             center.localScale = Vector3.one * Mathf.Lerp(center.localScale.x, endScale, t);
             skillsParent.localPosition =  Vector2.Lerp(skillsParent.localPosition, skillsParentPos, t);
+            BGImageCG.alpha = Mathf.Lerp(BGImageCG.alpha, bgImageAlpha, t);
+            BaseImageCG.alpha = Mathf.Lerp(BaseImageCG.alpha, baseImageAlpha, t);
             yield return null;
         }
 
@@ -303,22 +321,18 @@ public class SkillAnimationManager : MonoBehaviour
 
     private void UpdateHighlightedSkill()
     {
-        if (currentMode == WheelMode.Expanded)
+        for (int i = 0; i < skillIcons.Length; i++)
         {
-            for (int i = 0; i < skillIcons.Length; i++) skillIcons[i].localScale = Vector3.one;
-
-            int sel = 0; float best = Mathf.Infinity;
-            for (int i = 0; i < cachedExpandAngles.Length; i++)
+            if (currentMode == WheelMode.Contracted)
             {
-                float diff = Mathf.Abs(Mathf.DeltaAngle(cachedExpandAngles[i], 180f));
-                if (diff < best) { best = diff; sel = i; }
+                skills[i].SetActiveStatus(false, false);
             }
-            skillIcons[sel].localScale = Vector3.one * 1.2f;
-        }
-        else
-        {
-            for (int i = 0; i < skillIcons.Length; i++)
-                skillIcons[i].localScale = Vector3.one;
+            else
+            {
+                float angle = cachedExpandAngles[i];
+                bool isHighlighted = Mathf.Abs(Mathf.DeltaAngle(angle, 180f)) < 10f; // Highlight if within 10° of 180°
+                skills[i].SetActiveStatus(isHighlighted, true);
+            }
         }
     }
 
@@ -333,7 +347,7 @@ public class SkillAnimationManager : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.D))
             MoveSkillsToRight();
         else if (Input.GetKeyDown(KeyCode.Space))
-            SkillClicked(index);
+            SkillClicked(0);
     }
     
     private void OnDrawGizmos()
