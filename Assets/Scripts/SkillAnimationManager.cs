@@ -19,45 +19,28 @@ public class SkillAnimationManager : MonoBehaviour
 
     private WheelMode currentMode = WheelMode.Contracted;
 
-    public float[] contractAngles = { 90f, 18f, 306f, 234f, 162f };
-    public float[] defaultExpandAngles = { 270f, 225f, 180f, 135f, 90f };
     private float[] cachedExpandAngles;
 
     private Coroutine centerAnimation;
     private Coroutine currentAnimation;
-
-    public RectTransform contractPosition;
-    public RectTransform expandPosition;
 
     public RectTransform skillsParent;
 
     public CanvasGroup BGImageCG;
     public CanvasGroup BaseImageCG;
 
-    public float BGImageExpandAlpha = 0.3f;
-    public float BaseImageExpandAlpha = 1f;
-
-    public float contractBaseScale = 1f;
-    public float expandBaseScale = 2f;
-
-    public float contractSkillRadius = 100f;
-    public float expandSkillRadius = 75f;
-
-    public float contractSkillScale = 1f;
-    public float expandSkillScale = 0.6f;
-
     public float highlightedSkillScale = 1f;
-
-    public Vector2 skillsCenterOffsetExpand;
-    public Vector2 skillsCenterOffsetContract;
 
     public Button BGButton;
     public Button SkillIconButton;
-    
+
     public Skill[] skills; // Array of Skill components for interaction
 
     // Cache the highlighted skill index (default is 2 for 180° position)
     private int highlightedSkillIndex = 2;
+
+    public WheelSettings ContractSettings;
+    public WheelSettings ExpandSettings;
 
     private void Awake()
     {
@@ -73,11 +56,10 @@ public class SkillAnimationManager : MonoBehaviour
         BGButton.onClick.AddListener(MoveToCompactMode);
         SkillIconButton.onClick.AddListener(MoveToExpandMode);
         // Initialize caches
-        cachedExpandAngles = new float[defaultExpandAngles.Length];
-        defaultExpandAngles.CopyTo(cachedExpandAngles, 0);
-
+        cachedExpandAngles = new float[ExpandSettings.Angles.Length];
+        ExpandSettings.Angles.CopyTo(cachedExpandAngles, 0);
         // Start snapped in contracted mode
-        SnapToAngles(contractAngles, contractSkillRadius);
+        SnapToAngles(ContractSettings.Angles, ContractSettings.Radius);
     }
 
     [ContextMenu("Move Skills to Compact Mode")]
@@ -94,7 +76,7 @@ public class SkillAnimationManager : MonoBehaviour
 
         // Special case when coming from 135° position
         bool useFreePaths = cachedExpandAngles[0] == 135f;
-        AnimateToAngles(contractAngles,
+        AnimateToAngles(ContractSettings.Angles,
                     useFreePaths ? RotationMode.ShortestPath :
                     RotationMode.ForceCounterClockwise);
 
@@ -127,6 +109,7 @@ public class SkillAnimationManager : MonoBehaviour
         var targetScales = new float[skillIcons.Length];
         var startAngles = new float[skillIcons.Length];
         var targetAngles = new float[skillIcons.Length];
+        var settings = currentMode == WheelMode.Contracted ? ContractSettings : ExpandSettings;
 
         // record start angles/scales
         for (int i = 0; i < skillIcons.Length; i++)
@@ -135,7 +118,7 @@ public class SkillAnimationManager : MonoBehaviour
             startAngles[i] = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
             // compute target scale
             if (currentMode == WheelMode.Contracted)
-                targetScales[i] = contractSkillScale;
+                targetScales[i] = settings.SkillScale;
             else
                 targetScales[i] = GetScaleFromIndex(i);
             // compute rotation delta
@@ -161,7 +144,7 @@ public class SkillAnimationManager : MonoBehaviour
             targetAngles[i] = startAngles[i] + delta;
         }
 
-        currentAnimation = StartCoroutine(AnimatePositions(startAngles, targetAngles, targetScales, currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius, angles));
+        currentAnimation = StartCoroutine(AnimatePositions(startAngles, targetAngles, targetScales, settings.Radius, angles));
 
         float GetScaleFromIndex(int index)
         {
@@ -171,11 +154,11 @@ public class SkillAnimationManager : MonoBehaviour
             }
             else if (index - 1 == highlightedSkillIndex || index + 1 == highlightedSkillIndex)
             {
-                return (highlightedSkillScale + expandSkillScale) * 0.5f;
+                return (highlightedSkillScale + settings.SkillScale) * 0.5f;
             }
             else
             {
-                return expandSkillScale;
+                return settings.SkillScale;
             }
         }
     }
@@ -213,11 +196,12 @@ public class SkillAnimationManager : MonoBehaviour
 
     private IEnumerator AnimateBase()
     {
-        Vector2 endPos = currentMode == WheelMode.Expanded ? expandPosition.anchoredPosition : contractPosition.anchoredPosition;
-        float endScale = currentMode == WheelMode.Expanded ? expandBaseScale : contractBaseScale;
-        Vector2 skillsParentPos = currentMode == WheelMode.Expanded ? skillsCenterOffsetExpand : skillsCenterOffsetContract;
-        float bgImageAlpha = currentMode == WheelMode.Expanded ? BGImageExpandAlpha : 0f;
-        float baseImageAlpha = currentMode == WheelMode.Expanded ? BaseImageExpandAlpha : 0f;
+        var settings = currentMode == WheelMode.Expanded ? ExpandSettings : ContractSettings;
+        Vector2 endPos = settings.CenterPosition.anchoredPosition;
+        float endScale = settings.BaseScale;
+        Vector2 skillsParentPos = settings.CenterOffset;
+        float bgImageAlpha = settings.BGAlpha;
+        float baseImageAlpha = settings.BaseAlpha;
         float elapsed = 0f;
         while (elapsed < animationDuration)
         {
@@ -258,13 +242,13 @@ public class SkillAnimationManager : MonoBehaviour
     {
         if (currentMode != WheelMode.Expanded) return;
 
-        if (index == highlightedSkillIndex) return; 
+        if (index == highlightedSkillIndex) return;
 
         int n = cachedExpandAngles.Length;
 
         // Calculate how many steps to rotate to bring clicked skill to highlighted position
         int stepsToRotate = (highlightedSkillIndex - index + n) % n;
-        
+
         if (stepsToRotate == 0) return; // Already at target position
 
         // Create new angles array by rotating
@@ -273,7 +257,7 @@ public class SkillAnimationManager : MonoBehaviour
         {
             newAngles[i] = cachedExpandAngles[(i + stepsToRotate) % n];
         }
-        
+
         // Update cached angles
         cachedExpandAngles = newAngles;
 
@@ -283,8 +267,8 @@ public class SkillAnimationManager : MonoBehaviour
         // Determine rotation direction based on shortest path
         int forwardSteps = stepsToRotate;
         int backwardSteps = (n - stepsToRotate) % n;
-        
-        RotationMode mode = forwardSteps <= backwardSteps 
+
+        RotationMode mode = forwardSteps <= backwardSteps
             ? RotationMode.ForceClockwise      // Forward/left shift = clockwise
             : RotationMode.ForceCounterClockwise;  // Backward/right shift = counter-clockwise
 

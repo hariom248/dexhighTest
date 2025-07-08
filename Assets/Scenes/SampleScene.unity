@@ -1254,6 +1254,34 @@ MonoBehaviour:
   - {fileID: 669673200}
   - {fileID: 1613032251}
   - {fileID: 1894977695}
+  ContractSettings:
+    Angles:
+    - 90
+    - 18
+    - 306
+    - 234
+    - 162
+    Radius: 92
+    SkillScale: 1.1
+    BaseScale: 1
+    BGAlpha: 0
+    BaseAlpha: 0
+    CenterOffset: {x: 0, y: 0}
+    CenterPosition: {fileID: 578073358}
+  ExpandSettings:
+    Angles:
+    - 270
+    - 225
+    - 180
+    - 135
+    - 90
+    Radius: 72
+    SkillScale: 0.5
+    BaseScale: 2
+    BGAlpha: 0.3
+    BaseAlpha: 1
+    CenterOffset: {x: 0, y: 10}
+    CenterPosition: {fileID: 1083095385}
 --- !u!1 &1418749155
 GameObject:
   m_ObjectHideFlags: 0
