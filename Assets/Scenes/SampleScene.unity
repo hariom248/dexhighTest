@@ -1076,8 +1076,8 @@ MonoBehaviour:
   SkillsBasePanel: {fileID: 737454155}
   BGButton: {fileID: 923584675}
   SkillsBaseIconButton: {fileID: 1569438569}
-  animationDuration: 0.5
-  highlightedSkillScale: 0.9
+  AnimationDuration: 0.5
+  HighlightedSkillScale: 0.9
   ContractSettings:
     Angles:
     - 90

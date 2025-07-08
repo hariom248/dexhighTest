@@ -16,9 +16,9 @@ public class SkillAnimationManager : MonoBehaviour
     public Button BGButton;
     public Button SkillsBaseIconButton;
 
-    [Header("Animation")]
-    public float animationDuration = 0.5f;
-    public float highlightedSkillScale = 1f;
+    [Header("Animation/Scaling Settings")]
+    public float AnimationDuration;
+    public float HighlightedSkillScale;
 
     [Header("Wheel Settings")]
     public WheelSettings ContractSettings; // ensure Angles.Length == skills.Length
@@ -28,7 +28,7 @@ public class SkillAnimationManager : MonoBehaviour
 
     private RectTransform[] skillIcons;
     private float[] cachedExpandAngles;
-    private int highlightedSkillIndex = 2;
+    private int highlightedSkillIndex = 2; // default highlighted skill index
     private bool isExpanded = false;
 
     private Coroutine skillsAnimCoroutine;
@@ -83,16 +83,41 @@ public class SkillAnimationManager : MonoBehaviour
         var target = toExpand ? to.WithAngles(cachedExpandAngles) : to;
 
         AnimateSkills(from, target, mode);
-        AnimateBase(to);
+        AnimateBaseIcon(to);
+    }
+
+    private void OnSkillClicked(int index)
+    {
+        if (!isExpanded || index == highlightedSkillIndex) return;
+
+        int n = cachedExpandAngles.Length;
+        int steps = (highlightedSkillIndex - index + n) % n;
+        if (steps == 0) return;
+
+        // rotate cache
+        var newAngles = new float[n];
+        for (int i = 0; i < n; i++)
+            newAngles[i] = cachedExpandAngles[(i + steps) % n];
+        cachedExpandAngles = newAngles;
+
+        highlightedSkillIndex = index;
+
+        var mode = (steps <= n - steps)
+            ? RotationMode.ForceClockwise
+            : RotationMode.ForceCounterClockwise;
+
+        // animate with updated angles
+        var to = ExpandSettings.WithAngles(cachedExpandAngles);
+        AnimateSkills(ExpandSettings, to, mode);
     }
 
     private void AnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
         if (skillsAnimCoroutine != null) StopCoroutine(skillsAnimCoroutine);
-        skillsAnimCoroutine = StartCoroutine(DoAnimateWheel(from, to, mode));
+        skillsAnimCoroutine = StartCoroutine(DoAnimateSkills(from, to, mode));
     }
 
-    private IEnumerator DoAnimateWheel(WheelSettings from, WheelSettings to, RotationMode mode)
+    private IEnumerator DoAnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
         int n = skillIcons.Length;
         var startAngles  = new float[n];
@@ -112,10 +137,10 @@ public class SkillAnimationManager : MonoBehaviour
         UpdateHighlights();
 
         float elapsed = 0f;
-        while (elapsed < animationDuration)
+        while (elapsed < AnimationDuration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / AnimationDuration);
 
             for (int i = 0; i < n; i++)
             {
@@ -135,13 +160,13 @@ public class SkillAnimationManager : MonoBehaviour
         skillsAnimCoroutine = null;
     }
 
-    private void AnimateBase(WheelSettings s)
+    private void AnimateBaseIcon(WheelSettings s)
     {
         if (baseAnimCoroutine != null) StopCoroutine(baseAnimCoroutine);
-        baseAnimCoroutine = StartCoroutine(DoAnimateBase(s));
+        baseAnimCoroutine = StartCoroutine(DoAnimateBaseIcon(s));
     }
 
-    private IEnumerator DoAnimateBase(WheelSettings s)
+    private IEnumerator DoAnimateBaseIcon(WheelSettings s)
     {
         var startPos    = SkillsBaseIcon.anchoredPosition;
         var endPos      = s.CenterPosition.anchoredPosition;
@@ -155,10 +180,10 @@ public class SkillAnimationManager : MonoBehaviour
         var baseEnd     = s.SkillsBasePanelAlpha;
 
         float elapsed = 0f;
-        while (elapsed < animationDuration)
+        while (elapsed < AnimationDuration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / AnimationDuration);
 
             SkillsBaseIcon.anchoredPosition       = Vector2.Lerp(startPos, endPos, t);
             SkillsBaseIcon.localScale             = Vector3.one * Mathf.Lerp(startScale, endScale, t);
@@ -169,11 +194,11 @@ public class SkillAnimationManager : MonoBehaviour
             yield return null;
         }
 
-        SkillsBaseIcon.anchoredPosition       = endPos;
-        SkillsBaseIcon.localScale             = Vector3.one * endScale;
-        SkillsParent.anchoredPosition = endSkills;
-        BGOverlay.alpha               = s.BGOverlayAlpha;
-        SkillsBasePanel.alpha             = s.SkillsBasePanelAlpha;
+        SkillsBaseIcon.anchoredPosition         = endPos;
+        SkillsBaseIcon.localScale               = Vector3.one * endScale;
+        SkillsParent.anchoredPosition           = endSkills;
+        BGOverlay.alpha                         = bgEnd;
+        SkillsBasePanel.alpha                   = baseEnd;
 
         baseAnimCoroutine = null;
     }
@@ -200,31 +225,6 @@ public class SkillAnimationManager : MonoBehaviour
         SkillsParent.anchoredPosition = s.SkillsParentOffset;
         BGOverlay.alpha               = s.BGOverlayAlpha;
         SkillsBasePanel.alpha             = s.SkillsBasePanelAlpha;
-    }
-
-    private void OnSkillClicked(int index)
-    {
-        if (!isExpanded || index == highlightedSkillIndex) return;
-
-        int n = cachedExpandAngles.Length;
-        int steps = (highlightedSkillIndex - index + n) % n;
-        if (steps == 0) return;
-
-        // rotate cache
-        var newAngles = new float[n];
-        for (int i = 0; i < n; i++)
-            newAngles[i] = cachedExpandAngles[(i + steps) % n];
-        cachedExpandAngles = newAngles;
-
-        highlightedSkillIndex = index;
-
-        var mode = (steps <= n - steps)
-            ? RotationMode.ForceClockwise
-            : RotationMode.ForceCounterClockwise;
-
-        // animate with updated angles
-        var to = ExpandSettings.WithAngles(cachedExpandAngles);
-        AnimateSkills(ExpandSettings, to, mode);
     }
 
     private void UpdateHighlights()
@@ -261,10 +261,10 @@ public class SkillAnimationManager : MonoBehaviour
 
         int n = Skills.Length;
         if (idx == highlightedSkillIndex)
-            return highlightedSkillScale;
+            return HighlightedSkillScale;
         if ((idx + 1) % n == highlightedSkillIndex ||
             (idx - 1 + n) % n == highlightedSkillIndex)
-            return (highlightedSkillScale + baseScale) * 0.5f;
+            return (HighlightedSkillScale + baseScale) * 0.5f;
         return baseScale;
     }
 
