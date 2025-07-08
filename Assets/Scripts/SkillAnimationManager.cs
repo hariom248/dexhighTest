@@ -38,7 +38,7 @@ public class SkillAnimationManager : MonoBehaviour
     {
         // sanity check
         if (ContractSettings.Angles.Length != Skills.Length ||
-            ExpandSettings.Angles.Length  != Skills.Length)
+            ExpandSettings.Angles.Length != Skills.Length)
         {
             Debug.LogError("WheelSettings.Angles length must match number of skills!");
         }
@@ -70,7 +70,7 @@ public class SkillAnimationManager : MonoBehaviour
         isExpanded = toExpand;
 
         var from = toExpand ? ContractSettings : ExpandSettings;
-        var to   = toExpand ? ExpandSettings   : ContractSettings;
+        var to = toExpand ? ExpandSettings : ContractSettings;
 
         // choose rotation rule
         RotationMode mode = Mathf.Approximately(cachedExpandAngles[0], 135f)
@@ -120,16 +120,16 @@ public class SkillAnimationManager : MonoBehaviour
     private IEnumerator DoAnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
         int n = skillIcons.Length;
-        var startAngles  = new float[n];
+        var startAngles = new float[n];
         var targetAngles = new float[n];
         var targetScales = new float[n];
 
         // prepare
         for (int i = 0; i < n; i++)
         {
-            startAngles[i]  = CartesianToAngle(skillIcons[i].anchoredPosition);
-            float dest      = to.Angles[i] % 360f;
-            float delta     = ComputeDelta(startAngles[i], dest, mode);
+            startAngles[i] = CartesianToAngle(skillIcons[i].anchoredPosition);
+            float dest = to.Angles[i] % 360f;
+            float delta = ComputeDelta(startAngles[i], dest, mode);
             targetAngles[i] = startAngles[i] + delta;
             targetScales[i] = GetTargetScale(i, to.SkillScale);
         }
@@ -144,7 +144,7 @@ public class SkillAnimationManager : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                float ang    = Mathf.Lerp(startAngles[i], targetAngles[i], t);
+                float ang = Mathf.Lerp(startAngles[i], targetAngles[i], t);
                 float radius = Mathf.Lerp(from.Radius, to.Radius, t);
                 skillIcons[i].anchoredPosition = PolarToCartesian(ang, radius);
 
@@ -168,16 +168,16 @@ public class SkillAnimationManager : MonoBehaviour
 
     private IEnumerator DoAnimateBaseIcon(WheelSettings s)
     {
-        var startPos    = SkillsBaseIcon.anchoredPosition;
-        var endPos      = s.CenterPosition.anchoredPosition;
-        var startScale  = SkillsBaseIcon.localScale.x;
-        var endScale    = s.SkillsBaseIconScale;
+        var startPos = SkillsBaseIcon.anchoredPosition;
+        var endPos = s.CenterPosition.anchoredPosition;
+        var startScale = SkillsBaseIcon.localScale.x;
+        var endScale = s.SkillsBaseIconScale;
         var startSkills = SkillsParent.anchoredPosition;
-        var endSkills   = s.SkillsParentOffset;
-        var bgStart     = BGOverlay.alpha;
-        var bgEnd       = s.BGOverlayAlpha;
-        var baseStart   = SkillsBasePanel.alpha;
-        var baseEnd     = s.SkillsBasePanelAlpha;
+        var endSkills = s.SkillsParentOffset;
+        var bgStart = BGOverlay.alpha;
+        var bgEnd = s.BGOverlayAlpha;
+        var baseStart = SkillsBasePanel.alpha;
+        var baseEnd = s.SkillsBasePanelAlpha;
 
         float elapsed = 0f;
         while (elapsed < AnimationDuration)
@@ -185,46 +185,46 @@ public class SkillAnimationManager : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / AnimationDuration);
 
-            SkillsBaseIcon.anchoredPosition       = Vector2.Lerp(startPos, endPos, t);
-            SkillsBaseIcon.localScale             = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+            SkillsBaseIcon.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+            SkillsBaseIcon.localScale = Vector3.one * Mathf.Lerp(startScale, endScale, t);
             SkillsParent.anchoredPosition = Vector2.Lerp(startSkills, endSkills, t);
-            BGOverlay.alpha               = Mathf.Lerp(bgStart, s.BGOverlayAlpha, t);
-            SkillsBasePanel.alpha             = Mathf.Lerp(baseStart, s.SkillsBasePanelAlpha, t);
+            BGOverlay.alpha = Mathf.Lerp(bgStart, s.BGOverlayAlpha, t);
+            SkillsBasePanel.alpha = Mathf.Lerp(baseStart, s.SkillsBasePanelAlpha, t);
 
             yield return null;
         }
 
-        SkillsBaseIcon.anchoredPosition         = endPos;
-        SkillsBaseIcon.localScale               = Vector3.one * endScale;
-        SkillsParent.anchoredPosition           = endSkills;
-        BGOverlay.alpha                         = bgEnd;
-        SkillsBasePanel.alpha                   = baseEnd;
+        SkillsBaseIcon.anchoredPosition = endPos;
+        SkillsBaseIcon.localScale = Vector3.one * endScale;
+        SkillsParent.anchoredPosition = endSkills;
+        BGOverlay.alpha = bgEnd;
+        SkillsBasePanel.alpha = baseEnd;
 
         baseAnimCoroutine = null;
     }
 
     private void SnapLayout(WheelSettings s)
     {
-       SnapSkills(s);
-       SnapBase(s);
+        SnapSkills(s);
+        SnapBase(s);
     }
-    
+
     private void SnapSkills(WheelSettings s)
     {
         for (int i = 0; i < skillIcons.Length; i++)
         {
             skillIcons[i].anchoredPosition = PolarToCartesian(s.Angles[i], s.Radius);
-            skillIcons[i].localScale       = Vector3.one * GetTargetScale(i, s.SkillScale);
+            skillIcons[i].localScale = Vector3.one * GetTargetScale(i, s.SkillScale);
         }
     }
 
     private void SnapBase(WheelSettings s)
     {
-        SkillsBaseIcon.anchoredPosition       = s.CenterPosition.anchoredPosition;
-        SkillsBaseIcon.localScale             = Vector3.one * s.SkillsBaseIconScale;
+        SkillsBaseIcon.anchoredPosition = s.CenterPosition.anchoredPosition;
+        SkillsBaseIcon.localScale = Vector3.one * s.SkillsBaseIconScale;
         SkillsParent.anchoredPosition = s.SkillsParentOffset;
-        BGOverlay.alpha               = s.BGOverlayAlpha;
-        SkillsBasePanel.alpha             = s.SkillsBasePanelAlpha;
+        BGOverlay.alpha = s.BGOverlayAlpha;
+        SkillsBasePanel.alpha = s.SkillsBasePanelAlpha;
     }
 
     private void UpdateHighlights()
@@ -249,14 +249,14 @@ public class SkillAnimationManager : MonoBehaviour
     private float ComputeDelta(float fromDeg, float toDeg, RotationMode mode)
     {
         float d = Mathf.DeltaAngle(fromDeg, toDeg);
-        if (mode == RotationMode.ForceClockwise     && d >  0) d -= 360f;
-        if (mode == RotationMode.ForceCounterClockwise && d <  0) d += 360f;
+        if (mode == RotationMode.ForceClockwise && d > 0) d -= 360f;
+        if (mode == RotationMode.ForceCounterClockwise && d < 0) d += 360f;
         return d;
     }
 
     private float GetTargetScale(int idx, float baseScale)
     {
-        if (!isExpanded) 
+        if (!isExpanded)
             return baseScale;
 
         int n = Skills.Length;
