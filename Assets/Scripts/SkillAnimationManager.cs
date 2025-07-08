@@ -1,6 +1,6 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 
 public class SkillAnimationManager : MonoBehaviour
 {
@@ -20,110 +20,111 @@ public class SkillAnimationManager : MonoBehaviour
     public float highlightedSkillScale = 1f;
 
     [Header("Wheel Settings")]
-    public WheelSettings ContractSettings;
+    public WheelSettings ContractSettings; // e.g. SkillScale = 1.1f
     public WheelSettings ExpandSettings;
 
-    private enum WheelMode { Contracted, Expanded }
     private enum RotationMode { ForceClockwise, ForceCounterClockwise, ShortestPath }
 
-    private WheelMode currentMode = WheelMode.Contracted;
     private RectTransform[] skillIcons;
     private float[] cachedExpandAngles;
     private int highlightedSkillIndex = 2;
+    private bool isExpanded = false;
 
     private Coroutine wheelAnim;
     private Coroutine baseAnim;
 
     private void Awake()
     {
-        // Cache transforms & button callbacks
+        // cache icons & hook clicks
         skillIcons = new RectTransform[skills.Length];
         for (int i = 0; i < skills.Length; i++)
         {
             skills[i].SetActiveStatus(false, false);
             int idx = i;
-            skills[i].Button.onClick.AddListener(() => SkillClicked(idx));
+            skills[i].Button.onClick.AddListener(() => OnSkillClicked(idx));
             skillIcons[i] = skills[i].GetComponent<RectTransform>();
         }
 
-        BGButton.onClick.AddListener(() => MoveToState(ContractSettings, WheelMode.Contracted));
-        SkillIconButton.onClick.AddListener(() => MoveToState(ExpandSettings, WheelMode.Expanded));
+        // wire up transitions
+        BGButton.onClick.AddListener(() => Transition(false));
+        SkillIconButton.onClick.AddListener(() => Transition(true));
 
-        // Cache expand angles for interactive rotation
-        cachedExpandAngles = new float[ExpandSettings.Angles.Length];
-        ExpandSettings.Angles.CopyTo(cachedExpandAngles, 0);
+        // copy expand angles
+        cachedExpandAngles = (float[])ExpandSettings.Angles.Clone();
 
-        // Snap into contracted at start
-        MoveToCompactMode();
+        // initial snap to contracted
+        SnapToState(ContractSettings, false);
     }
 
-    [ContextMenu("Move Skills to Compact Mode")]
-    public void MoveToCompactMode()
-        => MoveToState(ContractSettings, WheelMode.Contracted);
+    public void MoveToCompactMode() => Transition(false);
+    public void MoveToExpandMode()  => Transition(true);
 
-    [ContextMenu("Move Skills to Expand Mode")]
-    public void MoveToExpandMode()
-        => MoveToState(ExpandSettings, WheelMode.Expanded);
-
-    private void MoveToState(WheelSettings settings, WheelMode targetMode)
+    private void Transition(bool toExpand)
     {
-        if (currentMode == targetMode) return;
-        currentMode = targetMode;
+        // update flag explicitly
+        isExpanded = toExpand;
 
-        // decide rotation mode
-        bool free = cachedExpandAngles[0] == 135f;
-        var rotation = free
+        // decide from/to settings
+        var from = toExpand ? ContractSettings : ExpandSettings;
+        var to   = toExpand ? ExpandSettings   : ContractSettings;
+
+        // choose rotation rule
+        bool freePath = Mathf.Approximately(cachedExpandAngles[0], 135f);
+        var mode = freePath
             ? RotationMode.ShortestPath
-            : (targetMode == WheelMode.Expanded
+            : (toExpand
                 ? RotationMode.ForceClockwise
                 : RotationMode.ForceCounterClockwise);
 
-        // pick angles array: expanded interactive uses cachedExpandAngles
-        var angles = (targetMode == WheelMode.Expanded)
-            ? cachedExpandAngles
-            : settings.Angles;
+        // pick angles array
+        var angles = toExpand ? cachedExpandAngles : to.Angles;
 
-        AnimateToAngles(settings, angles, rotation);
-        AnimateBase(settings);
+        AnimateWheel(from, to, angles, mode);
+        AnimateBase(to);
     }
 
-    private void AnimateToAngles(WheelSettings settings, float[] targetAngles, RotationMode mode)
+    private void AnimateWheel(
+        WheelSettings from,
+        WheelSettings to,
+        float[] finalAngles,
+        RotationMode mode)
     {
         if (wheelAnim != null) StopCoroutine(wheelAnim);
-        wheelAnim = StartCoroutine(DoAnimateWheel(settings, targetAngles, mode));
+        wheelAnim = StartCoroutine(DoAnimateWheel(from, to, finalAngles, mode));
     }
 
-    private IEnumerator DoAnimateWheel(WheelSettings settings, float[] finalAngles, RotationMode mode)
+    private IEnumerator DoAnimateWheel(
+        WheelSettings from,
+        WheelSettings to,
+        float[] finalAngles,
+        RotationMode mode)
     {
         int n = skillIcons.Length;
-        var startA = new float[n];
+        var startA  = new float[n];
         var targetA = new float[n];
         var targetS = new float[n];
 
-        // compute start/target
         for (int i = 0; i < n; i++)
         {
-            // start angle
+            // capture start angle
             Vector2 off = skillIcons[i].anchoredPosition;
             startA[i] = Mathf.Atan2(off.y, off.x) * Mathf.Rad2Deg;
 
-            // target angle delta
+            // compute shortest/forced rotation
             float dest = finalAngles[i] % 360f;
             float delta = Mathf.DeltaAngle(startA[i], dest);
-
             if (mode == RotationMode.ForceClockwise && delta > 0) delta -= 360f;
             if (mode == RotationMode.ForceCounterClockwise && delta < 0) delta += 360f;
-
             targetA[i] = startA[i] + delta;
 
-            // target scale
-            targetS[i] = (currentMode == WheelMode.Contracted)
-                ? settings.SkillScale
-                : GetExpandedScale(i, settings.SkillScale);
+            // assign target scale based on explicit flag
+            targetS[i] = isExpanded
+                ? GetExpandedScale(i, to.SkillScale)
+                : to.SkillScale;
         }
 
         float elapsed = 0f;
-        UpdateHighlightedSkill();
+        UpdateHighlights();
         while (elapsed < animationDuration)
         {
             elapsed += Time.deltaTime;
@@ -131,42 +132,47 @@ public class SkillAnimationManager : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                float ang = Mathf.Lerp(startA[i], targetA[i], t) * Mathf.Deg2Rad;
-                float radius = settings.Radius;
-                skillIcons[i].anchoredPosition = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * radius;
+                // position
+                float ang    = Mathf.Lerp(startA[i], targetA[i], t) * Mathf.Deg2Rad;
+                float radius = Mathf.Lerp(from.Radius, to.Radius, t);
+                skillIcons[i].anchoredPosition = new Vector2(
+                    Mathf.Cos(ang), Mathf.Sin(ang)
+                ) * radius;
 
-                float sc = Mathf.Lerp(skillIcons[i].localScale.x, targetS[i], t);
-                skillIcons[i].localScale = Vector3.one * sc;
+                // scale
+                float scOld = skillIcons[i].localScale.x;
+                float scNew = targetS[i];
+                skillIcons[i].localScale = Vector3.one * Mathf.Lerp(scOld, scNew, t);
             }
 
             yield return null;
         }
 
         // finalize
-        SnapToAngles(finalAngles, settings.Radius);
-        SnapToScales(targetS);
+        SnapAngles(finalAngles, to.Radius);
+        SnapScales(targetS);
         wheelAnim = null;
     }
 
-    private void AnimateBase(WheelSettings settings)
+    private void AnimateBase(WheelSettings s)
     {
         if (baseAnim != null) StopCoroutine(baseAnim);
-        baseAnim = StartCoroutine(DoAnimateBase(settings));
+        baseAnim = StartCoroutine(DoAnimateBase(s));
     }
 
     private IEnumerator DoAnimateBase(WheelSettings s)
     {
-        Vector2 startPos    = center.anchoredPosition;
-        float   startScale  = center.localScale.x;
-        Vector2 startSkills = skillsParent.anchoredPosition;
-        float   bgStart     = BGImageCG.alpha;
-        float   baseStart   = BaseImageCG.alpha;
+        var startPos    = center.anchoredPosition;
+        var startScale  = center.localScale.x;
+        var startSkills = skillsParent.anchoredPosition;
+        var bgStart     = BGImageCG.alpha;
+        var baseStart   = BaseImageCG.alpha;
 
-        Vector2 endPos      = s.CenterPosition.anchoredPosition;
-        float   endScale    = s.BaseScale;
-        Vector2 endSkills   = s.CenterOffset;
-        float   endBG       = s.BGAlpha;
-        float   endBaseBG   = s.BaseAlpha;
+        var endPos      = s.CenterPosition.anchoredPosition;
+        var endScale    = s.BaseScale;
+        var endSkills   = s.CenterOffset;
+        var endBG       = s.BGAlpha;
+        var endBaseBG   = s.BaseAlpha;
 
         float elapsed = 0f;
         while (elapsed < animationDuration)
@@ -174,73 +180,95 @@ public class SkillAnimationManager : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = Mathf.SmoothStep(0f, 1f, elapsed / animationDuration);
 
-            center.anchoredPosition    = Vector2.Lerp(startPos, endPos, t);
-            center.localScale          = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+            center.anchoredPosition       = Vector2.Lerp(startPos, endPos, t);
+            center.localScale             = Vector3.one * Mathf.Lerp(startScale, endScale, t);
             skillsParent.anchoredPosition = Vector2.Lerp(startSkills, endSkills, t);
-            BGImageCG.alpha            = Mathf.Lerp(bgStart, endBG, t);
-            BaseImageCG.alpha          = Mathf.Lerp(baseStart, endBaseBG, t);
+            BGImageCG.alpha               = Mathf.Lerp(bgStart, endBG, t);
+            BaseImageCG.alpha             = Mathf.Lerp(baseStart, endBaseBG, t);
 
             yield return null;
         }
 
-        // finalize
-        center.anchoredPosition    = endPos;
-        center.localScale          = Vector3.one * endScale;
+        center.anchoredPosition       = endPos;
+        center.localScale             = Vector3.one * endScale;
         skillsParent.anchoredPosition = endSkills;
-        BGImageCG.alpha            = endBG;
-        BaseImageCG.alpha          = endBaseBG;
+        BGImageCG.alpha               = endBG;
+        BaseImageCG.alpha             = endBaseBG;
 
         baseAnim = null;
     }
 
-    private void SnapToScales(float[] scales)
+    private void SnapToState(WheelSettings s, bool expanded)
+    {
+        // position & scale
+        for (int i = 0; i < skillIcons.Length; i++)
+        {
+            float rad = s.Angles[i] * Mathf.Deg2Rad;
+            skillIcons[i].anchoredPosition = new Vector2(
+                Mathf.Cos(rad), Mathf.Sin(rad)
+            ) * s.Radius;
+
+            float scale = expanded
+                ? GetExpandedScale(i, s.SkillScale)
+                : s.SkillScale;  // CONTRACT uses s.SkillScale (e.g. 1.1)
+            skillIcons[i].localScale = Vector3.one * scale;
+        }
+
+        UpdateHighlights();
+
+        center.anchoredPosition       = s.CenterPosition.anchoredPosition;
+        center.localScale             = Vector3.one * s.BaseScale;
+        skillsParent.anchoredPosition = s.CenterOffset;
+        BGImageCG.alpha               = s.BGAlpha;
+        BaseImageCG.alpha             = s.BaseAlpha;
+    }
+
+    private void SnapAngles(float[] angles, float radius)
+    {
+        for (int i = 0; i < skillIcons.Length; i++)
+        {
+            float deg = angles[i] * Mathf.Deg2Rad;
+            skillIcons[i].anchoredPosition = new Vector2(
+                Mathf.Cos(deg), Mathf.Sin(deg)
+            ) * radius;
+        }
+    }
+
+    private void SnapScales(float[] scales)
     {
         for (int i = 0; i < skillIcons.Length; i++)
             skillIcons[i].localScale = Vector3.one * scales[i];
     }
 
-    private void SnapToAngles(float[] angles, float radius)
+    private void OnSkillClicked(int index)
     {
-        for (int i = 0; i < skillIcons.Length; i++)
-        {
-            float deg = angles[i] % 360f;
-            skillIcons[i].anchoredPosition = new Vector2(
-                Mathf.Cos(deg * Mathf.Deg2Rad) * radius,
-                Mathf.Sin(deg * Mathf.Deg2Rad) * radius
-            );
-        }
-    }
+        if (!isExpanded || index == highlightedSkillIndex) return;
 
-    public void SkillClicked(int index)
-    {
-        if (currentMode != WheelMode.Expanded || index == highlightedSkillIndex)
-            return;
-
-        int n = cachedExpandAngles.Length;
+        int n     = cachedExpandAngles.Length;
         int steps = (highlightedSkillIndex - index + n) % n;
         if (steps == 0) return;
 
-        // rotate cached angles
+        // rotate cache
         var newA = new float[n];
         for (int i = 0; i < n; i++)
             newA[i] = cachedExpandAngles[(i + steps) % n];
         cachedExpandAngles = newA;
 
         highlightedSkillIndex = index;
-
-        // choose shortest
         var mode = (steps <= n - steps)
             ? RotationMode.ForceClockwise
             : RotationMode.ForceCounterClockwise;
 
-        AnimateToAngles(ExpandSettings, cachedExpandAngles, mode);
+        AnimateWheel(ExpandSettings, ExpandSettings, cachedExpandAngles, mode);
     }
 
-    private void UpdateHighlightedSkill()
+    private void UpdateHighlights()
     {
-        bool expanded = currentMode == WheelMode.Expanded;
         for (int i = 0; i < skills.Length; i++)
-            skills[i].SetActiveStatus(i == highlightedSkillIndex && expanded, expanded);
+            skills[i].SetActiveStatus(
+                isExpanded && i == highlightedSkillIndex,
+                isExpanded
+            );
     }
 
     private float GetExpandedScale(int idx, float baseScale)
@@ -248,7 +276,8 @@ public class SkillAnimationManager : MonoBehaviour
         int n = skills.Length;
         if (idx == highlightedSkillIndex)
             return highlightedSkillScale;
-        if ((idx + 1) % n == highlightedSkillIndex || (idx - 1 + n) % n == highlightedSkillIndex)
+        if ((idx + 1) % n == highlightedSkillIndex ||
+            (idx - 1 + n) % n == highlightedSkillIndex)
             return (highlightedSkillScale + baseScale) * 0.5f;
         return baseScale;
     }
