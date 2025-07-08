@@ -53,7 +53,7 @@ public class SkillAnimationManager : MonoBehaviour
         cachedExpandAngles = (float[])ExpandSettings.Angles.Clone();
 
         // initial snap to contracted
-        SnapToState(ContractSettings, false);
+        SnapToState(ContractSettings);
     }
 
     public void MoveToCompactMode() => Transition(false);
@@ -148,8 +148,7 @@ public class SkillAnimationManager : MonoBehaviour
         }
 
         // Snap to new state
-        SnapAngles(angles, to.Radius);
-        SnapScales(targetS);
+        SnapSkills(to);
         skillsAnimCoroutine = null;
     }
 
@@ -197,24 +196,14 @@ public class SkillAnimationManager : MonoBehaviour
         baseAnimCoroutine = null;
     }
 
-    private void SnapToState(WheelSettings s, bool expanded)
+    private void SnapToState(WheelSettings s)
     {
-        // position & scale
-        for (int i = 0; i < skillIcons.Length; i++)
-        {
-            float rad = s.Angles[i] * Mathf.Deg2Rad;
-            skillIcons[i].anchoredPosition = new Vector2(
-                Mathf.Cos(rad), Mathf.Sin(rad)
-            ) * s.Radius;
-
-            float scale = expanded
-                ? GetExpandedScale(i, s.SkillScale)
-                : s.SkillScale;  // CONTRACT uses s.SkillScale (e.g. 1.1)
-            skillIcons[i].localScale = Vector3.one * scale;
-        }
-
-        UpdateHighlights();
-
+        SnapBase(s);
+        SnapSkills(s);
+    }
+    
+    private void SnapBase(WheelSettings s)
+    {
         center.anchoredPosition       = s.CenterPosition.anchoredPosition;
         center.localScale             = Vector3.one * s.BaseScale;
         skillsParent.anchoredPosition = s.CenterOffset;
@@ -222,21 +211,15 @@ public class SkillAnimationManager : MonoBehaviour
         BaseImageCG.alpha             = s.BaseAlpha;
     }
 
-    private void SnapAngles(float[] angles, float radius)
+    private void SnapSkills(WheelSettings s)
     {
         for (int i = 0; i < skillIcons.Length; i++)
         {
-            float deg = angles[i] * Mathf.Deg2Rad;
-            skillIcons[i].anchoredPosition = new Vector2(
-                Mathf.Cos(deg), Mathf.Sin(deg)
-            ) * radius;
+            float rad = s.Angles[i] * Mathf.Deg2Rad;
+            skillIcons[i].anchoredPosition = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * s.Radius;
+            float scale = isExpanded ? GetExpandedScale(i, s.SkillScale) : s.SkillScale;
+            skillIcons[i].localScale = Vector3.one * scale;
         }
-    }
-
-    private void SnapScales(float[] scales)
-    {
-        for (int i = 0; i < skillIcons.Length; i++)
-            skillIcons[i].localScale = Vector3.one * scales[i];
     }
 
     private void OnSkillClicked(int index)
