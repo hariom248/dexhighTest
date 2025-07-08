@@ -64,6 +64,10 @@ public class SkillAnimationManager : MonoBehaviour
         SnapLayout(ContractSettings);
     }
 
+    /// <summary>
+    /// Transition to either expanded or contracted state.
+    /// If already in the target state, does nothing.
+    /// </summary>
     private void Transition(bool toExpand)
     {
         if (isExpanded == toExpand) return;
@@ -86,6 +90,11 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateBaseIcon(to);
     }
 
+    /// <summary>
+    /// Handles skill icon clicks.
+    /// Rotates the wheel to highlight the clicked skill.
+    /// If already highlighted, does nothing.
+    /// </summary>
     private void OnSkillClicked(int index)
     {
         if (!isExpanded || index == highlightedSkillIndex) return;
@@ -111,12 +120,19 @@ public class SkillAnimationManager : MonoBehaviour
         AnimateSkills(ExpandSettings, to, mode);
     }
 
+    /// <summary>
+    /// Animates the skill icons from one WheelSettings state to another.
+    /// </summary>
     private void AnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
         if (skillsAnimCoroutine != null) StopCoroutine(skillsAnimCoroutine);
+        UpdateHighlights();
         skillsAnimCoroutine = StartCoroutine(DoAnimateSkills(from, to, mode));
     }
 
+    /// <summary>
+    /// Performs the actual animation of skill icons.
+    /// </summary>
     private IEnumerator DoAnimateSkills(WheelSettings from, WheelSettings to, RotationMode mode)
     {
         int n = skillIcons.Length;
@@ -133,8 +149,6 @@ public class SkillAnimationManager : MonoBehaviour
             targetAngles[i] = startAngles[i] + delta;
             targetScales[i] = GetTargetScale(i, to.SkillScale);
         }
-
-        UpdateHighlights();
 
         float elapsed = 0f;
         while (elapsed < AnimationDuration)
@@ -160,12 +174,18 @@ public class SkillAnimationManager : MonoBehaviour
         skillsAnimCoroutine = null;
     }
 
+    /// <summary>
+    /// Animates the base icon and its related UI elements
+    /// </summary>
     private void AnimateBaseIcon(WheelSettings s)
     {
         if (baseAnimCoroutine != null) StopCoroutine(baseAnimCoroutine);
         baseAnimCoroutine = StartCoroutine(DoAnimateBaseIcon(s));
     }
 
+    /// <summary>
+    /// Performs the actual animation of the base icon and related UI elements.
+    /// </summary>
     private IEnumerator DoAnimateBaseIcon(WheelSettings s)
     {
         var startPos = SkillsBaseIcon.anchoredPosition;
@@ -203,12 +223,21 @@ public class SkillAnimationManager : MonoBehaviour
         baseAnimCoroutine = null;
     }
 
+    /// <summary>
+    /// Snaps the layout to the specified WheelSettings.
+    /// This is used to ensure the layout is correct after initialization or when settings change.
+    /// </summary>
+    /// <param name="s"></param>
     private void SnapLayout(WheelSettings s)
     {
         SnapSkills(s);
-        SnapBase(s);
+        SnapBaseIcon(s);
     }
 
+    /// <summary>
+    /// Snaps the skill icons to their positions and scales based on the provided WheelSettings.
+    /// </summary>
+    /// <param name="s"></param>
     private void SnapSkills(WheelSettings s)
     {
         for (int i = 0; i < skillIcons.Length; i++)
@@ -218,7 +247,11 @@ public class SkillAnimationManager : MonoBehaviour
         }
     }
 
-    private void SnapBase(WheelSettings s)
+    /// <summary>
+    /// Snaps the base icon and related UI elements to their positions and scales based on the provided WheelSettings.
+    /// </summary>
+    /// <param name="s"></param>
+    private void SnapBaseIcon(WheelSettings s)
     {
         SkillsBaseIcon.anchoredPosition = s.CenterPosition.anchoredPosition;
         SkillsBaseIcon.localScale = Vector3.one * s.SkillsBaseIconScale;
@@ -227,6 +260,9 @@ public class SkillAnimationManager : MonoBehaviour
         SkillsBasePanel.alpha = s.SkillsBasePanelAlpha;
     }
 
+    /// <summary>
+    /// Updates the active status of skill icons based on the highlighted skill index and expansion state.
+    /// </summary>
     private void UpdateHighlights()
     {
         for (int i = 0; i < Skills.Length; i++)
