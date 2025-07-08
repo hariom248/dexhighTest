@@ -25,8 +25,6 @@ public class SkillAnimationManager : MonoBehaviour
 
     private Coroutine centerAnimation;
     private Coroutine currentAnimation;
-    private float[] startAngles;
-    private float[] targetAngles;
 
     public RectTransform contractPosition;
     public RectTransform expandPosition;
@@ -77,8 +75,6 @@ public class SkillAnimationManager : MonoBehaviour
         // Initialize caches
         cachedExpandAngles = new float[defaultExpandAngles.Length];
         defaultExpandAngles.CopyTo(cachedExpandAngles, 0);
-        startAngles = new float[skillIcons.Length];
-        targetAngles = new float[skillIcons.Length];
 
         // Start snapped in contracted mode
         SnapToAngles(contractAngles, contractSkillRadius);
@@ -129,6 +125,8 @@ public class SkillAnimationManager : MonoBehaviour
         if (currentAnimation != null) StopCoroutine(currentAnimation);
 
         var targetScales = new float[skillIcons.Length];
+        var startAngles = new float[skillIcons.Length];
+        var targetAngles = new float[skillIcons.Length];
 
         // record start angles/scales
         for (int i = 0; i < skillIcons.Length; i++)
@@ -163,7 +161,7 @@ public class SkillAnimationManager : MonoBehaviour
             targetAngles[i] = startAngles[i] + delta;
         }
 
-        currentAnimation = StartCoroutine(AnimatePositions(angles, targetScales));
+        currentAnimation = StartCoroutine(AnimatePositions(startAngles, targetAngles, targetScales, currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius, angles));
 
         float GetScaleFromIndex(int index)
         {
@@ -182,10 +180,9 @@ public class SkillAnimationManager : MonoBehaviour
         }
     }
 
-    private IEnumerator AnimatePositions(float[] finalAngles, float[] targetScales)
+    private IEnumerator AnimatePositions(float[] startAngles, float[] targetAngles, float[] targetScales, float radius, float[] finalAngles)
     {
         float elapsed = 0f;
-        float radius = currentMode == WheelMode.Contracted ? contractSkillRadius : expandSkillRadius;
         UpdateHighlightedSkill();
         while (elapsed < animationDuration)
         {
